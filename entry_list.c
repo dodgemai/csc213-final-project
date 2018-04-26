@@ -24,6 +24,10 @@ void elist_destroy(entry_list_t* elist) {
 
 entry_node_t* make_entry_node(char* key, byte_sequence_t* element, entry_node_t* next) {
   entry_node_t* node = (entry_node_t*) malloc(sizeof(entry_node_t));
+  if(node == NULL) {
+    fprintf("Failed to allocate memory for entry node.\n");
+    exit(EXIT_FAILURE);
+  }
   node->data = element;
   node->next = next;
   node->key = strdup(key);

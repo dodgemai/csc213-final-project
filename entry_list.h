@@ -9,38 +9,44 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  //TODO: make this actually work for entries -- store entries rather than ints!
 
-  typedef struct hashmap_element {
-    char* key;
-    bool in_use;
-    void* data; 
-  } hashmap_element_t;
-  
+  typedef struct byte_sequence {
+    void* data; /* points to the actual byte sequence */
+    size_t length; /* tells how many bytes are actually stored in this seq */
+  } byte_sequence_t;
+
   typedef struct entry_node {
-    hashmap_element_t* data;
-    struct entry_node* next; 
+    char* key;
+    byte_sequence_t* data;
+    struct entry_node* next;
   } entry_node_t;
 
+  /* Note: entries are ordered alphabetically by key */
   typedef struct entry_list {
     entry_node_t* first;
     size_t length;
   } entry_list_t;
-  
+
   // Initialize a elist
-  void elist_init(entry_list_t* slist);
+  void elist_init(entry_list_t* elist);
 
   // Destroy a elist
-  void elist_destroy(entry_list_t* slist);
+  void elist_destroy(entry_list_t* elist);
 
   // Push an element onto a elist
-  void elist_push(entry_list_t* slist, hashmap_element_t* element);
+  void elist_push(entry_list_t* elist, char* key, byte_sequence_t* element);
+
+  // Push a unique element onto a elist
+  void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element);
 
   // Check if a elist is empty
-  bool elist_empty(entry_list_t* slist);
+  bool elist_empty(entry_list_t* elist);
 
-  //remove element from elist
-  void elist_remove(entry_list_t* slist, char* key);
+  // Remove element from elist
+  void elist_remove(entry_list_t* elist, char* key);
+
+  // Get a byte_sequence_t from the list, given key
+  byte_sequence_t* elist_get(entry_list_t* elist, char* key);
 
   // This makes the header file work for both C and C++
 #ifdef __cplusplus

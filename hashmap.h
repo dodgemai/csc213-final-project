@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-  typedef struct hashmap {
+  typedef struct _hashmap {
     int capacity;
     int size_used;
     entry_list_t** table;

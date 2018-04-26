@@ -46,6 +46,7 @@ void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element)
     int comp_val = strcmp(cur->key, key);
     if(comp_val == 0) {
       cur->data = element;
+      return;
     } else if(comp_val < 0) {
       entry_node_t* to_add = make_entry_node(key, element, cur->next);
       cur->next = to_add;
@@ -107,7 +108,7 @@ byte_sequence_t* elist_get(entry_list_t* elist, char* key) {
   while(cur != NULL) {
 
     //if we find it, return the corresponding byte sequence
-    if(cur->key == key) {
+    if(strcmp(cur->key, key) == 0) {
       return cur->data;
     }
     cur = cur->next;

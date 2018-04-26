@@ -13,11 +13,11 @@ int main(void) {
   char* key2 = strdup("key2");
   char* value2 = strdup("value2");
 
-  byte_sequence_t* value1_byteseq;
+  byte_sequence_t* value1_byteseq = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   value1_byteseq->data = value1;
   value1_byteseq->length = 69;
 
-  byte_sequence_t* value2_byteseq;
+  byte_sequence_t* value2_byteseq = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   value2_byteseq->data = value2;
   value2_byteseq->length = 692;
 
@@ -28,6 +28,7 @@ int main(void) {
   byte_sequence_t* value2_ret = (byte_sequence_t*) hashmap_get(&map, key2);
 
   printf("Value 1: %s\n", (char*)value1_ret->data);
+  printf("Value 2: %s\n", (char*)value2_ret->data);
 
   return 0;
 }

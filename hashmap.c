@@ -89,15 +89,34 @@ void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value) {
   unsigned int index = hash(key) % map->capacity;
   entry_list_t* bucket = *(map->table + index);
 
-  //if bucket doesn't exist, make one
+  //if bucket doesn't exist, make one and add key-value pair
   if(bucket == NULL) {
     *(map->table + index) = (entry_list_t*) malloc(sizeof(entry_list_t));
     elist_init(*(map->table + index));
     elist_push_unique(*(map->table + index), key, value);
     return;
   }
-  //if bucket already exists, add it up
+
+  //if bucket already exists, add key-value pair
   else {
     elist_push_unique(bucket, key, value);
+  }
+}
+
+// Remove an element from map
+void hashmap_remove(hashmap_t* map, char* key) {
+  unsigned int index = hash(key) % map->capacity;
+  entry_list_t* bucket = *(map->table + index);
+
+  //if bucket doesn't exist, exit
+  if(bucket == NULL) { return; }
+
+  //remove key
+  elist_remove(bucket, key);
+
+  //if no more keys in bucket, destroy and zero out
+  if(bucket->length == 0) {
+    hashmap_bucket_destroy(bucket);
+    *(map->table + index) = NULL;
   }
 }

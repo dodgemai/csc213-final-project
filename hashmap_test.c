@@ -21,6 +21,7 @@ int main(void) {
   value2_byteseq->data = value2;
   value2_byteseq->length = 692;
 
+  //test put & get
   hashmap_put(&map, key1, value1_byteseq);
   hashmap_put(&map, key2, value2_byteseq);
 
@@ -30,5 +31,12 @@ int main(void) {
   printf("Value 1: %s\n", (char*)value1_ret->data);
   printf("Value 2: %s\n", (char*)value2_ret->data);
 
+  //test remove
+  printf("Removing key1...\n");
+  hashmap_remove(&map, key1);
+  printf("Contains key1?: %s\n", (hashmap_contains_key(&map, key1)) ? "true" : "false");
+
+  //test cleanup
+  hashmap_destroy(&map);
   return 0;
 }

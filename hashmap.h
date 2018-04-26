@@ -51,6 +51,9 @@ extern "C" {
   // Put element into map -- if key already exists, update value
   void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value);
 
+  // Remove an element from map
+  void hashmap_remove(hashmap_t* map, char* key);
+
   // This makes the header file work for both C and C++
 #ifdef __cplusplus
 }

@@ -92,6 +92,10 @@ void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value) {
   //if bucket doesn't exist, make one and add key-value pair
   if(bucket == NULL) {
     *(map->table + index) = (entry_list_t*) malloc(sizeof(entry_list_t));
+    if(*(map->table + index) == NULL) {
+      fprintf("Failed to allocate space for bucket.\n");
+      exit(EXIT_FAILURE);
+    }
     elist_init(*(map->table + index));
     elist_push_unique(*(map->table + index), key, value);
     return;

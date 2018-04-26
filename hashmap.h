@@ -6,12 +6,9 @@
 #include <stdlib.h>
 #include "entry_list.h"
 
-//Fixed size hash map using chaining
-//Need to implement a linked list,
-//and have elements contain that linked-list
+//Fixed size hash map using chaining for collisions
 
-
-#define INITIAL_CAPACITY 100
+#define INITIAL_CAPACITY 1000
 
 // This makes the header file work for both C and C++
 #ifdef __cplusplus

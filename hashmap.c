@@ -93,7 +93,7 @@ void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value) {
   if(bucket == NULL) {
     *(map->table + index) = (entry_list_t*) malloc(sizeof(entry_list_t));
     if(*(map->table + index) == NULL) {
-      fprintf("Failed to allocate space for bucket.\n");
+      fprintf(stderr, "Failed to allocate space for bucket.\n");
       exit(EXIT_FAILURE);
     }
     elist_init(*(map->table + index));

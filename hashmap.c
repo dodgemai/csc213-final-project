@@ -1,4 +1,6 @@
 #include "hashmap.h"
+#include "entry_list.h"
+#include "mcache_types.h"
 #include <stdio.h>
 
   // Initialize a hashmap

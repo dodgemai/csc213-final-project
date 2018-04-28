@@ -10,8 +10,10 @@
 #include <netdb.h>
 #include "socket_list.h"
 #include "server.h"
+#include "mcache_types.h"
 #include <pthread.h>
 #include <signal.h>
+#include <stdint.h>
 
 #define _DEBUG true
 /* NOTE: maybe don't actually need child_socks -- we will see.
@@ -31,7 +33,12 @@ void trim_message(char* message);
 /**
 * parse query given by client, and handle appropriately
 */
-void parse_query(char* query);
+bool parse_query(char* query);
+bool parse_set(char* args);
+bool parse_add(char* args);
+bool parse_get(char* args);
+bool parse_gets(char* args);
+bool parse_delete(char* args);
 
 //handle dumb SIGPIPE signal
 void handler(int s) { }
@@ -147,29 +154,99 @@ void trim_message(char* message) {
 }
 
 //NOTE: directly modifies query, must not be string literal
-void parse_query(char* query) {
+bool parse_query(char* query) {
   char* args = strtok(query, " ");
 
   if(args == NULL) {
     //invalid command
     if(_DEBUG) { printf("Invalid command. Given %s\n", query); }
-    return;
-  }
-
-  if(strcmp(query, "set") == 0) {
+    return false;
+  } else if(strcmp(query, "set") == 0) {
     if(_DEBUG) { printf("Received set command.\n"); }
-    //TODO do set stuff
+    return parse_set(args);
   } else if(strcmp(query, "add") == 0) {
     if(_DEBUG) { printf("Received add command.\n"); }
-    //TODO do add stuff
+    return parse_add(args);
   } else if(strcmp(query, "get") == 0) {
     if(_DEBUG) { printf("Received get command.\n"); }
-    //TODO do get stuff
+    return parse_get(args);
   } else if(strcmp(query, "gets") == 0) {
     if(_DEBUG) { printf("Received gets command.\n"); }
-    //TODO do gets stuff
+    return parse_gets(args);
   } else if(strcmp(query, "delete") == 0) {
     if(_DEBUG) { printf("Received delete command.\n"); }
-    //TODO do delete stuff
+    return parse_delete(args);
+  } else {
+    //unrecognized command
+    if(_DEBUG) { printf("Unrecognized command.\n"); }
+    return false;
   }
+}
+
+bool parse_set(char* args) {
+  char* rest = strtok(args, " ");
+  if(rest == NULL) {
+    //invalid set query
+    if(_DEBUG) { printf("Invalid set query. Given %s\n", args); }
+    return false;
+  }
+
+  //args is now the key
+  char* key = args;
+  uint8_t* data = (uint8_t*)rest;
+  int data_length = strlen(rest);
+  byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
+  if(formatted_data == NULL) {
+    fprintf(stderr, "Failed to allocate memory for data.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  formatted_data->data = data;
+  formatted_data->length = data_length;
+
+  //mcache_set(key, formatted_data); //TODO implement and uncomment
+  return true; //TODO fix
+}
+
+bool parse_add(char* args) {
+  char* rest = strtok(args, " ");
+  if(rest == NULL) {
+    //invalid set query
+    if(_DEBUG) { printf("Invalid set query. Given %s\n", args); }
+    return false;
+  }
+
+  //args is now the key
+  char* key = args;
+  uint8_t* data = (uint8_t*)rest;
+  int data_length = strlen(rest);
+  byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
+  if(formatted_data == NULL) {
+    fprintf(stderr, "Failed to allocate memory for data.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  formatted_data->data = data;
+  formatted_data->length = data_length;
+
+  //mcache_add(key, formatted_data); //TODO implement and uncomment
+  return true; //TODO fix
+}
+
+bool parse_get(char* args) {
+  //byte_sequence_t* data = mcache_get(char* key);
+  //TODO send data to baby, may have to rethink return value??
+  return true; //TODO fix
+}
+
+bool parse_gets(char* args) {
+  //implement this last, this will be kind of a pain to do and not really necessary for now
+  //just loop through all of the args and stick to end of byte_seq pointer array
+  //byte_sequence_t** data = mcache_gets(char** keys)
+  return true; //TODO fix
+}
+
+bool parse_delete(char* args) {
+  //mcache_delete(args); //TODO implement and uncomment
+  return true; //TODO fix
 }

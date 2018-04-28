@@ -9,10 +9,10 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "socket_list.h"
+#include "server.h"
 #include <pthread.h>
 #include <signal.h>
 
-#define SERVER_PORT 58008
 #define _DEBUG true
 /* NOTE: maybe don't actually need child_socks -- we will see.
 * we can keep for now, but I really don't foresee a need for it to exist

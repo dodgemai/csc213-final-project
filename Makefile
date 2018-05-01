@@ -17,3 +17,4 @@ clean: tidy
 	rm -f server
 	rm -f hashmap_test
 	rm -f server_test
+	rm -rf ./*.dSYM

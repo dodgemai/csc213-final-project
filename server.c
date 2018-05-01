@@ -8,12 +8,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include "socket_list.h"
-#include "server.h"
-#include "mcache_types.h"
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
+
+#include "hashmap.h"
+#include "socket_list.h"
+#include "server.h"
+#include "mcache_types.h"
+#include "mcache.h"
 
 #define _DEBUG true
 /* NOTE: maybe don't actually need child_socks -- we will see.
@@ -33,18 +36,19 @@ void trim_message(char* message);
 /**
 * parse query given by client, and handle appropriately
 */
-bool parse_query(char* query);
-bool parse_set(char* args);
-bool parse_add(char* args);
-bool parse_get(char* args);
-bool parse_gets(char* args);
-bool parse_delete(char* args);
+void parse_query(char* query, int socket);
+void parse_set(char* args);
+void parse_add(char* args);
+void parse_get(char* args, int socket);
+void parse_gets(char* args, int socket);
+void parse_delete(char* args);
 
 //handle dumb SIGPIPE signal
 void handler(int s) { }
 
 //global values
 socket_list_t child_socks;
+hashmap_t hmap;
 bool active;
 
 typedef struct socket_arg {
@@ -54,6 +58,7 @@ typedef struct socket_arg {
 int main(void) {
 
   slist_init(&child_socks); //prep child_socks
+  hashmap_init(&hmap); //prep hmap
   active = true; //set server to active
 
   //handle SIGPIPE error, just drop it and move on it's already
@@ -118,8 +123,14 @@ int main(void) {
 void* child_thread_fn(void* arg) {
   int s = ((socket_arg_t*)arg)->socket;
 
+  // Duplicate the socket_fd so we can open it twice, once for input and once for output
+  int socket_fd_copy = dup(s);
+  if(socket_fd_copy == -1) {
+    return NULL;
+  }
+
   // Open the socket as a FILE stream so we can use fgets
-  FILE* input = fdopen(s, "r");
+  FILE* input = fdopen(socket_fd_copy, "r");
 
   // Check for errors
   if(input == NULL) {
@@ -134,7 +145,12 @@ void* child_thread_fn(void* arg) {
       return NULL;
     }
 
-    parse_query(line);
+    //remove newline char
+    trim_message(line);
+
+    //parse query and handle request appropriately
+    parse_query(line, s);
+
     free(line);
   }
 
@@ -149,13 +165,12 @@ void trim_message(char* message) {
 }
 
 //NOTE: directly modifies query, must not be string literal
-bool parse_query(char* query) {
+void parse_query(char* query, int socket) {
   char* args = strtok(query, " ");
 
   if(args == NULL) {
     //invalid command
     if(_DEBUG) { printf("Invalid command. Given %s\n", query); }
-    return false;
   } else if(strcmp(query, "set") == 0) {
     if(_DEBUG) { printf("Received set command.\n"); }
     return parse_set(args);
@@ -164,26 +179,25 @@ bool parse_query(char* query) {
     return parse_add(args);
   } else if(strcmp(query, "get") == 0) {
     if(_DEBUG) { printf("Received get command.\n"); }
-    return parse_get(args);
+    return parse_get(args, socket);
   } else if(strcmp(query, "gets") == 0) {
     if(_DEBUG) { printf("Received gets command.\n"); }
-    return parse_gets(args);
+    return parse_gets(args, socket);
   } else if(strcmp(query, "delete") == 0) {
     if(_DEBUG) { printf("Received delete command.\n"); }
     return parse_delete(args);
   } else {
     //unrecognized command
     if(_DEBUG) { printf("Unrecognized command.\n"); }
-    return false;
   }
 }
 
-bool parse_set(char* args) {
+void parse_set(char* args) {
   char* rest = strtok(args, " ");
   if(rest == NULL) {
     //invalid set query
     if(_DEBUG) { printf("Invalid set query. Given %s\n", args); }
-    return false;
+    return;
   }
 
   //args is now the key
@@ -199,22 +213,22 @@ bool parse_set(char* args) {
   formatted_data->data = data;
   formatted_data->length = data_length;
 
-  //mcache_set(key, formatted_data); //TODO implement and uncomment
-  return true; //TODO fix
+  mcache_set(&hmap, key, formatted_data);
+
 }
 
-bool parse_add(char* args) {
+void parse_add(char* args) {
   char* rest = strtok(args, " ");
   if(rest == NULL) {
     //invalid set query
     if(_DEBUG) { printf("Invalid set query. Given %s\n", args); }
-    return false;
+    return;
   }
 
   //args is now the key
   char* key = args;
   uint8_t* data = (uint8_t*)rest;
-  int data_length = strlen(rest);
+  int data_length = strlen(rest); //TODO might want 1 less, for null terminator??
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
     fprintf(stderr, "Failed to allocate memory for data.\n");
@@ -224,24 +238,21 @@ bool parse_add(char* args) {
   formatted_data->data = data;
   formatted_data->length = data_length;
 
-  //mcache_add(key, formatted_data); //TODO implement and uncomment
-  return true; //TODO fix
+  mcache_add(&hmap, key, formatted_data);
 }
 
-bool parse_get(char* args) {
-  //byte_sequence_t* data = mcache_get(char* key);
-  //TODO send data to baby, may have to rethink return value??
-  return true; //TODO fix
+void parse_get(char* args, int socket) {
+  byte_sequence_t* value = mcache_get(&hmap, args);
+  write(socket, value->data, value->length);
 }
 
-bool parse_gets(char* args) {
+void parse_gets(char* args, int socket) {
   //implement this last, this will be kind of a pain to do and not really necessary for now
   //just loop through all of the args and stick to end of byte_seq pointer array
   //byte_sequence_t** data = mcache_gets(char** keys)
-  return true; //TODO fix
+  //TODO actually do this
 }
 
-bool parse_delete(char* args) {
-  //mcache_delete(args); //TODO implement and uncomment
-  return true; //TODO fix
+void parse_delete(char* args) {
+  mcache_delete(&hmap, args);
 }

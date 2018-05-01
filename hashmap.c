@@ -16,13 +16,21 @@ void hashmap_init(hashmap_t* map) {
 }
 
 bucket_t* bucket_init(void) {
+  //allocate space for bucket
   bucket_t* ret = (bucket_t*) malloc(sizeof(bucket_t));
   if(ret == NULL) {
     fprintf(stderr, "Failed to allocate space for bucket.\n");
     exit(EXIT_FAILURE);
   }
-  elist_init(ret->elist);
+
+  //allocate and initialize elist
+  entry_list_t* elist = (entry_list_t*) malloc(sizeof(entry_list_t));
+  elist_init(elist);
+  ret->elist = elist;
+
+  //initialize mutex lock
   pthread_mutex_init(&ret->m, NULL);
+  
   return ret;
 }
 
@@ -114,6 +122,7 @@ int hashmap_size(hashmap_t* map) {
 void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value) {
   if(map == NULL) { return; }
   unsigned int index = hash(key) % map->capacity;
+
   bucket_t* _bucket = *(map->table + index);
 
   //if bucket doesn't exist, make one and add key-value pair
@@ -126,6 +135,7 @@ void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value) {
   //if bucket already exists, add key-value pair
   elist_push_unique(_bucket->elist, key, value);
   pthread_mutex_unlock(&_bucket->m);
+  map->size_used++;
 }
 
 // Remove an element from map

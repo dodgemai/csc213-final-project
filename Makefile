@@ -1,5 +1,5 @@
 CFLAGS=-Wall -std=gnu99 # -fsanitize=address -g
-CC=clang
+CC=clang -g
 
 server: server.c server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_list.c entry_list.h mcache_types.h
 	${CC} ${CFLAGS} -o server server.c socket_list.c hashmap.c entry_list.c

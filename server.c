@@ -118,14 +118,9 @@ int main(void) {
 void* child_thread_fn(void* arg) {
   int s = ((socket_arg_t*)arg)->socket;
 
-  // Duplicate the socket_fd so we can open it twice, once for input and once for output
-  int socket_fd_copy = dup(s);
-  if(socket_fd_copy == -1) {
-    return NULL;
-  }
-
   // Open the socket as a FILE stream so we can use fgets
-  FILE* input = fdopen(socket_fd_copy, "r");
+  FILE* input = fdopen(s, "r");
+
   // Check for errors
   if(input == NULL) {
     return NULL;

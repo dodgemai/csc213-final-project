@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "entry_list.h"
+#include <pthread.h>
 
 //Fixed size hash map using chaining for collisions
 
@@ -15,17 +16,23 @@
 extern "C" {
 #endif
 
+  typedef struct _bucket {
+    entry_list_t* elist;
+    pthread_mutex_t m;
+  } bucket_t;
+
   typedef struct _hashmap {
     int capacity;
     int size_used;
-    entry_list_t** table;
+    bucket_t** table;
+    pthread_mutex_t map_lock;
   } hashmap_t;
 
   // Initialize a hashmap
   void hashmap_init(hashmap_t* map);
 
   // Destoy an bucket
-  void hashmap_bucket_destroy(entry_list_t* element);
+  void hashmap_bucket_destroy(bucket_t* element);
 
   // Destroy a hashmap
   void hashmap_destroy(hashmap_t* map);

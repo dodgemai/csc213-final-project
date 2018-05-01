@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 void elist_init(entry_list_t* elist) {
+  if(elist == NULL) { return; }
   elist->first = NULL;
   elist->length = 0;
 }
@@ -15,6 +16,8 @@ void entry_destroy(entry_node_t* node) {
 }
 
 void elist_destroy(entry_list_t* elist) {
+  if(elist == NULL) { return; }
+
   entry_node_t* cur = elist->first;
   while(cur != NULL) {
     entry_node_t* tmp = cur->next;
@@ -36,12 +39,14 @@ entry_node_t* make_entry_node(char* key, byte_sequence_t* element, entry_node_t*
 }
 
 void elist_push(entry_list_t* elist, char* key, byte_sequence_t* element) {
+  if(elist == NULL) { return; }
   entry_node_t* to_add = make_entry_node(key, element, elist->first);
   elist->first = to_add;
   elist->length++;
 }
 
 void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element) {
+  if(elist == NULL) { return; }
   if(elist_empty(elist)) {
     elist_push(elist, key, element);
   }
@@ -70,11 +75,13 @@ void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element)
 }
 
 bool elist_empty(entry_list_t* elist) {
+  if(elist == NULL) { return true; }
   bool ret = elist->first == NULL;
   return ret;
 }
 
 void elist_remove(entry_list_t* elist, char* key) {
+  if(elist == NULL) { return; }
   if(elist_empty(elist)) {
     return;
   }
@@ -103,6 +110,7 @@ void elist_remove(entry_list_t* elist, char* key) {
 // Get a byte_sequence_t from the list, given key
 byte_sequence_t* elist_get(entry_list_t* elist, char* key) {
   //TODO with expiration junk, maybe bump whatever key is up in the queue
+  if(elist == NULL) { return NULL; }
   if(elist_empty(elist)) {
     return NULL;
   }

@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <entry_list.h>
+#include <hashmap.h>
 
 bool mcache_set(hashmap_t* map, char* key, byte_sequence_t* data){
   hashmap_put(map, key, data);

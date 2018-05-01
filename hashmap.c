@@ -119,6 +119,7 @@ void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value) {
   //if bucket doesn't exist, make one and add key-value pair
   if(_bucket == NULL) {
     *(map->table + index) = bucket_init();
+    _bucket = *(map->table + index);
   }
 
   pthread_mutex_lock(&_bucket->m);

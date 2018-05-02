@@ -33,6 +33,13 @@ void* child_thread_fn(void* arg);
 void trim_message(char* message);
 
 /**
+* get mcache data length from a character string
+* NOTE: will almost certainly segault if using this outside
+* of context of mcache data being sent over tcp connection
+*/
+size_t mcache_data_len(char* message);
+
+/**
 * parse query given by client, and handle appropriately
 */
 void parse_query(char* query, int socket);
@@ -211,8 +218,18 @@ void parse_set(char* args) {
 
   //args is now the key
   char* key = args;
-  uint8_t* data = (uint8_t*)rest;
-  int data_length = strlen(rest);
+
+  /*Lol okay so right now this doesn't work with structs b/c padding is with
+  null bytes, so then strlen is waaaay shorter than it should be!
+
+  So I guess need to use a different delimeter-- maybe 0x0c001be9*/
+  //get length of data
+  int data_length = strlen(rest) + 1;
+
+  //allocate and fill data TODO potentially unnecessary copy??
+  void* data = malloc(sizeof(data_length));
+  memcpy(data, rest, data_length);
+
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
     fprintf(stderr, "Failed to allocate memory for data.\n");
@@ -240,7 +257,7 @@ void parse_add(char* args) {
   //args is now the key
   char* key = args;
   uint8_t* data = (uint8_t*)rest;
-  int data_length = strlen(rest);
+  size_t data_length = mcache_data_len(rest);
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
     fprintf(stderr, "Failed to allocate memory for data.\n");
@@ -285,4 +302,13 @@ void parse_gets(char* args, int socket) {
 
 void parse_delete(char* args) {
   hashmap_remove(&hmap, args);
+}
+
+/* Note -- could replace this with just newline character?? */
+size_t mcache_data_len(char* message) {
+  for(int i = 0; /* no cond */; i++) {
+    if(*(uint32_t*)(message + i) == MCACHE_END_BUFF) {
+      return i;
+    }
+  }
 }

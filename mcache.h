@@ -8,11 +8,11 @@
 
 void mcache_init(char* server_address);
 
-void mcache_set(char* key, byte_sequence_t* data);
+void mcache_set(char* key, void* data_ptr, size_t data_len);
 
-void mcache_add(char* key, byte_sequence_t* data);
+void mcache_add(char* key, void* data_ptr, size_t data_len);
 
-byte_sequence_t* mcache_get(char* key);
+void* mcache_get(char* key);
 
 byte_sequence_t** mcache_gets(char** keys, size_t num_keys);
 

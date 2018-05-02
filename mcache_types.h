@@ -10,10 +10,22 @@
 extern "C" {
 #endif
 
+  //special byte to specify end of message
+  #define MCACHE_END_BUFF 0x0c001be9
+
   typedef struct byte_sequence {
-    uint8_t* data; /* points to the actual byte sequence */
+    void* data; /* points to the actual byte sequence */
     size_t length; /* tells how many bytes are actually stored in this seq */
   } byte_sequence_t;
+
+  /*for testing only, pretty dumb struct otherwise*/
+  typedef struct _big_struct {
+    int i1;
+    int i2;
+    char c;
+    char str[10];
+  } big_struct_t;
+
 
   // This makes the header file work for both C and C++
 #ifdef __cplusplus

@@ -43,11 +43,17 @@ void mcache_init(char* server_address) {
 }
 
 //NOTE super gross
-void mcache_set(char* key, byte_sequence_t* data) {
-  int keylen = strlen(key);
-  int messagelen = keylen + data->length + 6;
+void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
+  byte_sequence_t data = {
+    .data = data_ptr,
+    .length = num_bytes
+  };
 
-  //allocate memory for message ("set " + key + " " + data + newline char)
+  int keylen = strlen(key);
+  int messagelen = keylen + data.length + 6;
+
+  //delimiting byte = "0x0c001be9"
+  //allocate memory for message ("set " + key + " " + data + delimiting byte + newline char)
   char message[messagelen];
 
   //copy "set " into message -- 4 bytes total
@@ -60,19 +66,24 @@ void mcache_set(char* key, byte_sequence_t* data) {
   message[keylen + 4] = ' ';
 
   //copy data into the rest of message
-  memcpy(message + keylen + 5, data->data, data->length);
-  message[keylen + data->length + 5] = '\n';
+  memcpy(message + keylen + 5, data.data, data.length);
+  message[keylen + data.length + 5] = '\n';
 
   //send message to mcache server
   write(s, message, messagelen);
 }
 
 //Note: internally equivalent to set
-void mcache_add(char* key, byte_sequence_t* data) {
-  int keylen = strlen(key);
-  int messagelen = keylen + data->length + 6;
+void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
+  byte_sequence_t data = {
+    .data = data_ptr,
+    .length = num_bytes
+  };
 
-  //allocate memory for message ("set " + key + " " + data + newline char)
+  int keylen = strlen(key);
+  int messagelen = keylen + data.length + 10;
+  //delimiter = "0x0c001be9"
+  //allocate memory for message ("set " + key + " " + data + delimiting 4byte + newline char)
   char message[messagelen];
 
   //copy "add " into message -- 4 bytes total
@@ -84,16 +95,20 @@ void mcache_add(char* key, byte_sequence_t* data) {
   //insert space after key
   message[keylen + 4] = ' ';
 
+  uint32_t delimiter = MCACHE_END_BUFF;
   //copy data into the rest of message
-  memcpy(message + keylen + 5, data->data, data->length);
-  message[keylen + data->length + 5] = '\n';
+  memcpy(message + keylen + 5, data.data, data.length);
+  memcpy(message + keylen + data.length + 5, &delimiter, 4);
+  message[keylen + data.length + 9] = '\n';
 
   //send message to mcache server
   write(s, message, messagelen);
 }
 
 //returns NULL on failure
-byte_sequence_t* mcache_get(char* key) {
+//key is key to value
+//NOTE: returned value must be freed by user
+void* mcache_get(char* key) {
   int keylen = strlen(key);
   int messagelen = keylen + 5;
 
@@ -116,19 +131,15 @@ byte_sequence_t* mcache_get(char* key) {
   int16_t data_len;
   read(s, &data_len, 2);
   data_len = ntohs(data_len);
-  
+
   //if get failed
   if(data_len == -1) {
+    //TODO do something better with a miss than just not touch it!!!!
     return NULL;
   }
 
-  uint8_t byte_seq[data_len];
-  read(s, byte_seq, data_len);
-
-  //format data and fill in values
-  byte_sequence_t* ret = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
-  ret->data = byte_seq;
-  ret->length = data_len;
+  void* ret = malloc(sizeof(data_len));
+  read(s, ret, data_len);
   return ret;
 }
 

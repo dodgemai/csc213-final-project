@@ -166,7 +166,12 @@ void trim_message(char* message) {
 
 //NOTE: directly modifies query, must not be string literal
 void parse_query(char* query, int socket) {
-  char* args = strtok(query, " ");
+  printf("Received query: %s\n", query);
+
+  //get command str and args
+  char* args = strchr(query, ' ');
+  *args = '\0';
+  args++;
 
   if(args == NULL) {
     //invalid command
@@ -188,12 +193,16 @@ void parse_query(char* query, int socket) {
     return parse_delete(args);
   } else {
     //unrecognized command
-    if(_DEBUG) { printf("Unrecognized command: Given %c. Length: %d\n", query[0]); }
+    if(_DEBUG) { printf("Unrecognized command: Given %s\n", query); }
   }
 }
 
 void parse_set(char* args) {
-  char* rest = strtok(args, " ");
+  //parse string into tokens
+  char* rest = strchr(args, ' ');
+  *rest = '\0';
+  rest++;
+
   if(rest == NULL) {
     //invalid set query
     if(_DEBUG) { printf("Invalid set query. Given %s\n", args); }
@@ -217,7 +226,11 @@ void parse_set(char* args) {
 }
 
 void parse_add(char* args) {
-  char* rest = strtok(args, " ");
+  //parse string into tokens
+  char* rest = strchr(args, ' ');
+  *rest = '\0';
+  rest++;
+
   if(rest == NULL) {
     //invalid set query
     if(_DEBUG) { printf("Invalid set query. Given %s\n", args); }
@@ -227,7 +240,7 @@ void parse_add(char* args) {
   //args is now the key
   char* key = args;
   uint8_t* data = (uint8_t*)rest;
-  int data_length = strlen(rest); //TODO might want 1 less, for null terminator??
+  int data_length = strlen(rest);
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
     fprintf(stderr, "Failed to allocate memory for data.\n");
@@ -242,10 +255,25 @@ void parse_add(char* args) {
 
 //NOTE sends first 2 bytes as the length of the message
 void parse_get(char* args, int socket) {
+  if(_DEBUG) { printf("getting key: %s\n", args); }
   byte_sequence_t* value = hashmap_get(&hmap, args);
-  //TODO compress to one write for efficieny
-  write(socket, &(value->length), 2);
+
+  if(value == NULL) {
+    write(socket, "-1", 2);
+  } else {
+    /*
+  //NOTE TODO inefficient potentially?? have to copy data potench unnecessarily
+  size_t messagelen = 2 + value->length; //2 byte size, and then pointer to the start of data strm
+  void* message = malloc(messagelen); //malloc space for message
+  memcpy(message, &(value->length), 2);
+  memcpy(message, value->data, value->length);
+
+  write(socket, message, messagelen);
+  */
+  int16_t datalen = (int16_t)htons(value->length);
+  write(socket, &(datalen), 2);
   write(socket, value->data, value->length);
+  }
 }
 
 void parse_gets(char* args, int socket) {

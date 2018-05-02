@@ -41,70 +41,86 @@ void mcache_init(char* server_address) {
     exit(2);
   }
 }
+
+//NOTE super gross
 void mcache_set(char* key, byte_sequence_t* data) {
-
-  //TODO compact into a single write for efficieny's sake!
-  write(s, "set ", 4);
-
   int keylen = strlen(key);
-  //allocate memory for message (key + " " + data + newline char)
-  char message[keylen + data->length + 2];
+  int messagelen = keylen + data->length + 6;
 
-  //copy key into message
-  memcpy(message, key, keylen);
+  //allocate memory for message ("set " + key + " " + data + newline char)
+  char message[messagelen];
 
-  //insert space into message
-  message[keylen] = ' ';
+  //copy "set " into message -- 4 bytes total
+  memcpy(message, "set ", 4);
+
+  //copy key into message after "set ".
+  memcpy(message + 4, key, keylen);
+
+  //insert space after key
+  message[keylen + 4] = ' ';
 
   //copy data into the rest of message
-  memcpy(message + keylen + 1, data->data, data->length);
-  message[keylen + data->length] = '\n';
+  memcpy(message + keylen + 5, data->data, data->length);
+  message[keylen + data->length + 5] = '\n';
 
   //send message to mcache server
-  write(s, message, keylen + data->length + 2);
+  write(s, message, messagelen);
 }
 
+//Note: internally equivalent to set
 void mcache_add(char* key, byte_sequence_t* data) {
-
-  //TODO compact into a single write for efficieny's sake!
-  write(s, "add ", 4);
-
   int keylen = strlen(key);
-  //allocate memory for message (key + " " + data + newline char)
-  char message[keylen + data->length + 2];
+  int messagelen = keylen + data->length + 6;
 
-  //copy key into message
-  memcpy(message, key, keylen);
+  //allocate memory for message ("set " + key + " " + data + newline char)
+  char message[messagelen];
 
-  //insert space into message
-  message[keylen] = ' ';
+  //copy "add " into message -- 4 bytes total
+  memcpy(message, "add ", 4);
+
+  //copy key into message after "set ".
+  memcpy(message + 4, key, keylen);
+
+  //insert space after key
+  message[keylen + 4] = ' ';
 
   //copy data into the rest of message
-  memcpy(message + keylen, data->data, data->length);
-  message[keylen + data->length + 1] = '\n';
+  memcpy(message + keylen + 5, data->data, data->length);
+  message[keylen + data->length + 5] = '\n';
 
   //send message to mcache server
-  write(s, message, keylen + data->length + 2);
+  write(s, message, messagelen);
 }
 
+//returns NULL on failure
 byte_sequence_t* mcache_get(char* key) {
-  //make internal copy of key to mess with
-  char* _key = strdup(key);
   int keylen = strlen(key);
-  //replace null terminator with null character
-  _key[keylen - 1] = '\n';
+  int messagelen = keylen + 5;
 
-  //TODO compact into a single write for efficieny's sake!
+  //allocate memory for message ("get " + key + newline char)
+  char message[messagelen];
 
-  write(s, "get ", 4);
+  //copy "get " into message -- 4 bytes total
+  memcpy(message, "get ", 4);
+
+  //copy key after "get "
+  memcpy(message + 4, key, keylen);
+
+  //replace null terminator with newline character
+  message[keylen + 4] = '\n';
 
   //send message to mcache server
-  write(s, _key, keylen);
-  free(_key);
+  write(s, message, messagelen);
 
   //get the length of the byte stream
-  uint16_t data_len;
+  int16_t data_len;
   read(s, &data_len, 2);
+  data_len = ntohs(data_len);
+  
+  //if get failed
+  if(data_len == -1) {
+    return NULL;
+  }
 
   uint8_t byte_seq[data_len];
   read(s, byte_seq, data_len);
@@ -122,18 +138,23 @@ byte_sequence_t** mcache_gets(char** keys, size_t num_keys) {
 }
 
 void mcache_delete(char* key) {
-  //make internal copy of key to mess with
-  char* _key = strdup(key);
   int keylen = strlen(key);
-  //replace null terminator with null character
-  _key[keylen - 1] = '\n';
+  int messagelen = keylen + 8;
 
-  //TODO compact into a single write for efficieny's sake!
-  write(s, "remove ", 7);
+  //allocate memory for message ("delete " + key + newline char)
+  char message[messagelen];
+
+  //copy "get " into message -- 7 bytes total
+  memcpy(message, "delete ", 7);
+
+  //copy key after "get "
+  memcpy(message + 7, key, keylen);
+
+  //replace null terminator with newline character
+  message[keylen + 7] = '\n';
 
   //send message to mcache server
-  write(s, _key, keylen);
-  free(_key);
+  write(s, message, messagelen);
 }
 
 void mcache_exit(void) {

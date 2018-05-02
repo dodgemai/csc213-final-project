@@ -6,14 +6,17 @@
 
 //NOTE TODO might want to separate byte_sequence_t into a more relevant header file!
 
-void mcache_set(hashmap_t* map, char* key, byte_sequence_t* data);
+void mcache_init(char* server_address);
 
-void mcache_add(hashmap_t* map, char* key, byte_sequence_t* data);
+void mcache_set(char* key, byte_sequence_t* data);
 
-byte_sequence_t* mcache_get(hashmap_t* map, char* key);
+void mcache_add(char* key, byte_sequence_t* data);
 
-byte_sequence_t** mcache_gets(hashmap_t* map, char** keys, size_t num_keys);
+byte_sequence_t* mcache_get(char* key);
 
-void mcache_delete(hashmap_t* map, char* key);
+byte_sequence_t** mcache_gets(char** keys, size_t num_keys);
 
+void mcache_delete(char* key);
+
+void mcache_exit(void);
 #endif

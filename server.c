@@ -16,7 +16,6 @@
 #include "socket_list.h"
 #include "server.h"
 #include "mcache_types.h"
-#include "mcache.h"
 
 #define _DEBUG true
 /* NOTE: maybe don't actually need child_socks -- we will see.
@@ -152,6 +151,7 @@ void* child_thread_fn(void* arg) {
     parse_query(line, s);
 
     free(line);
+
   }
 
   return NULL;
@@ -188,7 +188,7 @@ void parse_query(char* query, int socket) {
     return parse_delete(args);
   } else {
     //unrecognized command
-    if(_DEBUG) { printf("Unrecognized command.\n"); }
+    if(_DEBUG) { printf("Unrecognized command: Given %c. Length: %d\n", query[0]); }
   }
 }
 
@@ -213,8 +213,7 @@ void parse_set(char* args) {
   formatted_data->data = data;
   formatted_data->length = data_length;
 
-  mcache_set(&hmap, key, formatted_data);
-
+  hashmap_put(&hmap, key, formatted_data);
 }
 
 void parse_add(char* args) {
@@ -238,11 +237,14 @@ void parse_add(char* args) {
   formatted_data->data = data;
   formatted_data->length = data_length;
 
-  mcache_add(&hmap, key, formatted_data);
+  hashmap_put(&hmap, key, formatted_data);
 }
 
+//NOTE sends first 2 bytes as the length of the message
 void parse_get(char* args, int socket) {
-  byte_sequence_t* value = mcache_get(&hmap, args);
+  byte_sequence_t* value = hashmap_get(&hmap, args);
+  //TODO compress to one write for efficieny
+  write(socket, &(value->length), 2);
   write(socket, value->data, value->length);
 }
 
@@ -254,5 +256,5 @@ void parse_gets(char* args, int socket) {
 }
 
 void parse_delete(char* args) {
-  mcache_delete(&hmap, args);
+  hashmap_remove(&hmap, args);
 }

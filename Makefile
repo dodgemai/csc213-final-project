@@ -1,4 +1,4 @@
-CFLAGS=-Wall -std=gnu99 # -fsanitize=address -g
+CFLAGS=-Wall -std=gnu99 -g  -fsanitize=address 
 CC=clang -g
 
 server: server.c server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_list.c entry_list.h mcache_types.h mcache.h mcache.c

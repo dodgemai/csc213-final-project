@@ -34,7 +34,7 @@ void trim_message(char* message);
 
 /**
 * get mcache data length from a character string
-* NOTE: will almost certainly segault if using this outside
+* NOTE: will almost certainly segfault if using this outside
 * of context of mcache data being sent over tcp connection
 */
 size_t mcache_data_len(char* message);
@@ -185,7 +185,7 @@ void parse_query(char* query, int socket) {
     if(_DEBUG) { printf("Invalid command. Given %s\n", query); }
   } else if(strcmp(query, "set") == 0) {
     if(_DEBUG) { printf("Received set command.\n"); }
-    return parse_set(args);
+    return parse_set(args); //TODO NOTE URGENT CHANGE TO SET
   } else if(strcmp(query, "add") == 0) {
     if(_DEBUG) { printf("Received add command.\n"); }
     return parse_add(args);
@@ -219,14 +219,10 @@ void parse_set(char* args) {
   //args is now the key
   char* key = args;
 
-  /*Lol okay so right now this doesn't work with structs b/c padding is with
-  null bytes, so then strlen is waaaay shorter than it should be!
-
-  So I guess need to use a different delimeter-- maybe 0x0c001be9*/
   //get length of data
-  int data_length = strlen(rest) + 1;
+  size_t data_length = mcache_data_len(rest);
 
-  //allocate and fill data TODO potentially unnecessary copy??
+  //allocate and fill data
   void* data = malloc(sizeof(data_length));
   memcpy(data, rest, data_length);
 
@@ -250,14 +246,20 @@ void parse_add(char* args) {
 
   if(rest == NULL) {
     //invalid set query
-    if(_DEBUG) { printf("Invalid set query. Given %s\n", args); }
+    if(_DEBUG) { printf("Invalid add query. Given %s\n", args); }
     return;
   }
 
   //args is now the key
   char* key = args;
-  uint8_t* data = (uint8_t*)rest;
+
+  //get length of data
   size_t data_length = mcache_data_len(rest);
+
+  //allocate and fill data
+  void* data = malloc(sizeof(data_length));
+  memcpy(data, rest, data_length);
+
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
     fprintf(stderr, "Failed to allocate memory for data.\n");
@@ -287,7 +289,7 @@ void parse_get(char* args, int socket) {
 
   write(socket, message, messagelen);
   */
-  int16_t datalen = (int16_t)htons(value->length);
+  int16_t datalen = (int16_t)htons(value->length); //NOTE TODO limited to 16 bits of length!!!!!!
   write(socket, &(datalen), 2);
   write(socket, value->data, value->length);
   }

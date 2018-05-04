@@ -12,7 +12,7 @@ int main(void) {
 
   printf("Testing with char*...\n");
   printf("Set as: %s\n", test);
-  mcache_add("key1", test, strlen(test) + 1); // + 1 for null terminator
+  mcache_set("key1", test, strlen(test) + 1); // + 1 for null terminator
 
   char* v1 = mcache_get("key1");
 
@@ -35,7 +35,7 @@ int main(void) {
   test2.str[2] = '\0';
 
   print_big_struct(&test2);
-  mcache_add("key2", &test2, sizeof(test2));
+  mcache_set("key2", &test2, sizeof(test2));
 
   big_struct_t* v2 = mcache_get("key2");
 

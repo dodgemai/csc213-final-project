@@ -50,10 +50,9 @@ void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
   };
 
   int keylen = strlen(key);
-  int messagelen = keylen + data.length + 6;
-
-  //delimiting byte = "0x0c001be9"
-  //allocate memory for message ("set " + key + " " + data + delimiting byte + newline char)
+  int messagelen = keylen + data.length + 10;
+  //delimiter = "0x0c001be9"
+  //allocate memory for message ("set " + key + " " + data + delimiting 4byte + newline char)
   char message[messagelen];
 
   //copy "set " into message -- 4 bytes total
@@ -65,9 +64,11 @@ void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
   //insert space after key
   message[keylen + 4] = ' ';
 
+  uint32_t delimiter = MCACHE_END_BUFF;
   //copy data into the rest of message
   memcpy(message + keylen + 5, data.data, data.length);
-  message[keylen + data.length + 5] = '\n';
+  memcpy(message + keylen + data.length + 5, &delimiter, 4);
+  message[keylen + data.length + 9] = '\n';
 
   //send message to mcache server
   write(s, message, messagelen);
@@ -134,12 +135,12 @@ void* mcache_get(char* key) {
 
   //if get failed
   if(data_len == -1) {
-    //TODO do something better with a miss than just not touch it!!!!
     return NULL;
   }
 
   void* ret = malloc(sizeof(data_len));
   read(s, ret, data_len);
+
   return ret;
 }
 

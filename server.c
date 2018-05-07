@@ -14,11 +14,12 @@
 
 #include "hashmap.h"
 #include "socket_list.h"
+#include "key_list.h"
 #include "server.h"
 #include "mcache_types.h"
 
 #define _DEBUG true
-/* NOTE: maybe don't actually need child_socks -- we will see.
+/* NOTE: maybe don't actually need g_child_socks -- we will see.
 * we can keep for now, but I really don't foresee a need for it to exist
 */
 
@@ -38,24 +39,22 @@ void trim_message(char* message);
 * of context of mcache data being sent over tcp connection
 */
 size_t mcache_data_len(char* message);
-
-/**
-* parse query given by client, and handle appropriately
-*/
 void parse_query(char* query, int socket);
 void parse_set(char* args);
 void parse_add(char* args);
 void parse_get(char* args, int socket);
 void parse_gets(char* args, int socket);
 void parse_delete(char* args);
-
+void touch_key(char* key, size_t obj_size);
 //handle dumb SIGPIPE signal
 void handler(int s) { }
 
 //global values
-socket_list_t child_socks;
-hashmap_t hmap;
-bool active;
+socket_list_t g_child_socks;
+hashmap_t g_hmap;
+bool g_active;
+key_list_t g_keys;
+size_t g_memory_allocated;
 
 typedef struct socket_arg {
   int socket;
@@ -63,9 +62,11 @@ typedef struct socket_arg {
 
 int main(void) {
 
-  slist_init(&child_socks); //prep child_socks
-  hashmap_init(&hmap); //prep hmap
-  active = true; //set server to active
+  slist_init(&g_child_socks); //prep g_child_socks
+  hashmap_init(&g_hmap); //prep g_hmap
+  klist_init(&g_keys);  //prep g_keys
+  g_active = true; //set server to active
+  g_memory_allocated = 0; //init mem_allocated
 
   //handle SIGPIPE error, just drop it and move on it's already
   //accounted for
@@ -80,7 +81,7 @@ int main(void) {
     exit(2);
   }
 
-  // Listen at this address. We'll bind to port 0 to accept any available port
+  // Listen at this address
   struct sockaddr_in server_addr = {
     .sin_addr.s_addr = INADDR_ANY,
     .sin_family = AF_INET,
@@ -109,7 +110,7 @@ int main(void) {
     socklen_t server_addr_len = sizeof(struct sockaddr_in);
     int child_socket = accept(s, (struct sockaddr*)&server_addr, &server_addr_len);
 
-    slist_push(&child_socks, child_socket);
+    slist_push(&g_child_socks, child_socket);
 
     //set up child thread to get input from this connection
     pthread_t child_thread; //TODO Fix memory leak from this-- figure out where to free it
@@ -143,7 +144,7 @@ void* child_thread_fn(void* arg) {
     return NULL;
   }
 
-  while(active) {
+  while(g_active) {
 
     char* line = NULL;
     size_t linecap = 0;
@@ -158,7 +159,6 @@ void* child_thread_fn(void* arg) {
     parse_query(line, s);
 
     free(line);
-
   }
 
   return NULL;
@@ -185,10 +185,10 @@ void parse_query(char* query, int socket) {
     if(_DEBUG) { printf("Invalid command. Given %s\n", query); }
   } else if(strcmp(query, "set") == 0) {
     if(_DEBUG) { printf("Received set command.\n"); }
-    return parse_set(args); //TODO NOTE URGENT CHANGE TO SET
+    return parse_set(args);
   } else if(strcmp(query, "add") == 0) {
     if(_DEBUG) { printf("Received add command.\n"); }
-    return parse_add(args);
+    return parse_set(args); //TODO NOTE URGENT CHANGE TO ADD
   } else if(strcmp(query, "get") == 0) {
     if(_DEBUG) { printf("Received get command.\n"); }
     return parse_get(args, socket);
@@ -223,8 +223,31 @@ void parse_set(char* args) {
   size_t data_length = mcache_data_len(rest);
 
   //allocate and fill data
-  void* data = malloc(sizeof(data_length));
+  void* data = malloc(data_length);
   memcpy(data, rest, data_length);
+
+  //if object size is greater than storage space, don't store it
+  if(data_length > MCACHE_MAX_ALLOCATION) {
+    return;
+  }
+
+  //evict until there's enough space for allocated
+  while(g_memory_allocated + data_length > MCACHE_MAX_ALLOCATION) {
+    key_data_t* polled = klist_poll(&g_keys);
+
+    //update memory_allocated
+    g_memory_allocated -= polled->data_size;
+
+    //remove this evicted thing from hmap
+    hashmap_remove(&g_hmap, polled->key);
+
+    //free stuff
+    free(polled->key);
+    free(polled);
+  }
+
+  //update global memory allocation
+  g_memory_allocated += data_length;
 
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
@@ -235,7 +258,10 @@ void parse_set(char* args) {
   formatted_data->data = data;
   formatted_data->length = data_length;
 
-  hashmap_put(&hmap, key, formatted_data);
+  hashmap_put(&g_hmap, key, formatted_data);
+
+  //update keys queue
+  touch_key(key, data_length);
 }
 
 void parse_add(char* args) {
@@ -260,6 +286,9 @@ void parse_add(char* args) {
   void* data = malloc(sizeof(data_length));
   memcpy(data, rest, data_length);
 
+  //update global memory allocation
+  g_memory_allocated += data_length;
+
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
     fprintf(stderr, "Failed to allocate memory for data.\n");
@@ -269,13 +298,16 @@ void parse_add(char* args) {
   formatted_data->data = data;
   formatted_data->length = data_length;
 
-  hashmap_put(&hmap, key, formatted_data);
+  hashmap_put(&g_hmap, key, formatted_data);
+
+  //update keys queue
+  touch_key(key, data_length);
 }
 
 //NOTE sends first 2 bytes as the length of the message
 void parse_get(char* args, int socket) {
   if(_DEBUG) { printf("getting key: %s\n", args); }
-  byte_sequence_t* value = hashmap_get(&hmap, args);
+  byte_sequence_t* value = hashmap_get(&g_hmap, args);
 
   if(value == NULL) {
     write(socket, "-1", 2);
@@ -290,6 +322,10 @@ void parse_get(char* args, int socket) {
   write(socket, message, messagelen);
   */
   int16_t datalen = (int16_t)htons(value->length); //NOTE TODO limited to 16 bits of length!!!!!!
+
+  //update keys queue
+  touch_key(args, value->length);
+
   write(socket, &(datalen), 2);
   write(socket, value->data, value->length);
   }
@@ -303,7 +339,7 @@ void parse_gets(char* args, int socket) {
 }
 
 void parse_delete(char* args) {
-  hashmap_remove(&hmap, args);
+  hashmap_remove(&g_hmap, args);
 }
 
 /* Note -- could replace this with just newline character?? */
@@ -313,4 +349,8 @@ size_t mcache_data_len(char* message) {
       return i;
     }
   }
+}
+
+void touch_key(char* key, size_t obj_size) {
+  klist_add(&g_keys, key, obj_size);
 }

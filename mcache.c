@@ -138,7 +138,7 @@ void* mcache_get(char* key) {
     return NULL;
   }
 
-  void* ret = malloc(sizeof(data_len));
+  void* ret = malloc(data_len); //NOTE this is somehow a buffer-overflow??
   read(s, ret, data_len);
 
   return ret;

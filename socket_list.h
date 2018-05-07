@@ -32,7 +32,7 @@ extern "C" {
   // Check if a slist is empty
   bool slist_empty(socket_list_t* slist);
 
-  //remove element from slist
+  // Remove element from slist
   void slist_remove(socket_list_t* slist, int socket);
 
   // This makes the header file work for both C and C++

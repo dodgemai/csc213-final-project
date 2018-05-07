@@ -15,6 +15,7 @@ void hashmap_init(hashmap_t* map) {
   }
 }
 
+// Initialize a bucket
 bucket_t* bucket_init(void) {
   //allocate space for bucket
   bucket_t* ret = (bucket_t*) malloc(sizeof(bucket_t));
@@ -49,6 +50,7 @@ unsigned long hash(char* str) {
   return hash;
 }
 
+// Destroy a bucket
 void hashmap_bucket_destroy(bucket_t* bucket) {
   elist_destroy(bucket->elist);
   pthread_mutex_destroy(&bucket->m);

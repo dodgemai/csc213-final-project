@@ -3,18 +3,21 @@
 #include <string.h>
 #include <stdio.h>
 
+// Initialize a elist
 void elist_init(entry_list_t* elist) {
   if(elist == NULL) { return; }
   elist->first = NULL;
   elist->length = 0;
 }
 
+// Destroy an element of the elist
 void entry_destroy(entry_node_t* node) {
   free(node->key);
   free(node->data);
   free(node);
 }
 
+// Destroy a elist
 void elist_destroy(entry_list_t* elist) {
   if(elist == NULL) { return; }
 
@@ -26,6 +29,7 @@ void elist_destroy(entry_list_t* elist) {
   }
 }
 
+// Allocate memory and create a node for entry 
 entry_node_t* make_entry_node(char* key, byte_sequence_t* element, entry_node_t* next) {
   entry_node_t* node = (entry_node_t*) malloc(sizeof(entry_node_t));
   if(node == NULL) {
@@ -38,6 +42,7 @@ entry_node_t* make_entry_node(char* key, byte_sequence_t* element, entry_node_t*
   return node;
 }
 
+// Push an element onto a elist
 void elist_push(entry_list_t* elist, char* key, byte_sequence_t* element) {
   if(elist == NULL) { return; }
   entry_node_t* to_add = make_entry_node(key, element, elist->first);
@@ -45,6 +50,7 @@ void elist_push(entry_list_t* elist, char* key, byte_sequence_t* element) {
   elist->length++;
 }
 
+// Push a unique element onto a elist
 void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element) {
   if(elist == NULL) { return; }
   if(elist_empty(elist)) {
@@ -74,12 +80,14 @@ void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element)
   }
 }
 
+// Check if a elist is empty
 bool elist_empty(entry_list_t* elist) {
   if(elist == NULL) { return true; }
   bool ret = elist->first == NULL;
   return ret;
 }
 
+// Remove element from elist
 void elist_remove(entry_list_t* elist, char* key) {
   if(elist == NULL) { return; }
   if(elist_empty(elist)) {

@@ -9,13 +9,13 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
-
 #include "entry_list.h"
 #include "server.h"
 #include "mcache.h"
 
 int s;
 
+// Initialize the mcache server
 void mcache_init(char* server_address) {
   struct hostent* server = gethostbyname(server_address);
 
@@ -42,7 +42,7 @@ void mcache_init(char* server_address) {
   }
 }
 
-//NOTE super gross
+// Adds data into the mcache -- if the key already exists, update value
 void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
   byte_sequence_t data = {
     .data = data_ptr,
@@ -106,6 +106,7 @@ void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
   write(s, message, messagelen);
 }
 
+// Gets a value from the mcache by key
 //returns NULL on failure
 //key is key to value
 //NOTE: returned value must be freed by user
@@ -144,11 +145,13 @@ void* mcache_get(char* key) {
   return ret;
 }
 
+// Gets an array of values from mcache by an array of keys
 byte_sequence_t** mcache_gets(char** keys, size_t num_keys) {
   //TODO: add this thing
   return NULL;
 }
 
+// Deletes data stored in the mcache by key
 void mcache_delete(char* key) {
   int keylen = strlen(key);
   int messagelen = keylen + 8;
@@ -169,6 +172,7 @@ void mcache_delete(char* key) {
   write(s, message, messagelen);
 }
 
+// Close the mcache server
 void mcache_exit(void) {
   close(s);
 }

@@ -31,7 +31,7 @@ extern "C" {
   // Initialize a hashmap
   void hashmap_init(hashmap_t* map);
 
-  // Destoy an bucket
+  // Destroy a bucket
   void hashmap_bucket_destroy(bucket_t* element);
 
   // Destroy a hashmap

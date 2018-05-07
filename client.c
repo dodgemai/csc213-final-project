@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
+
 void print_big_struct(big_struct_t* s) {
   printf("i1 = %d\n i2 = %d\n c = %c\n str = %s\n\n", s->i1, s->i2, s->c, s->str);
 }

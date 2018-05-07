@@ -1,12 +1,13 @@
 #include "socket_list.h"
 #include <stdlib.h>
 
-
+// Initialize a slist
 void slist_init(socket_list_t* slist) {
   slist->first = NULL;
   slist->length = 0;
 }
 
+// Destroy a slist
 void slist_destroy(socket_list_t* slist) {
   sock_node_t* cur = slist->first;
   while(cur != NULL) {
@@ -16,6 +17,7 @@ void slist_destroy(socket_list_t* slist) {
   }
 }
 
+// Push an element onto a slist
 void slist_push(socket_list_t* slist, int element) {
   sock_node_t* to_add = (sock_node_t*) malloc(sizeof(sock_node_t));
   to_add->data = element;
@@ -24,12 +26,13 @@ void slist_push(socket_list_t* slist, int element) {
   slist->length++;
 }
 
-
+// Check if a slist is empty
 bool slist_empty(socket_list_t* slist) {
   bool ret = slist->first == NULL;
   return ret;
 }
 
+// Remove an element form slist
 void slist_remove(socket_list_t* slist, int socket) {
   if(slist_empty(slist)) {
     return;

@@ -18,6 +18,9 @@ client: client.c server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_
 	${CC} ${CFLAGS} -o client client.c mcache.c
 client_old: client_basic.c server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_list.c entry_list.h mcache_types.h mcache.h mcache.c
 	${CC} ${CFLAGS} -o client_old client_basic.c mcache.c
+
+client_in_process: client.c server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_list.c entry_list.h mcache_types.h mcache.h mcache_inclient.c key_list.c key_list.h
+	${CC} ${CFLAGS} -o client_in_process client.c mcache_inclient.c hashmap.c entry_list.c key_list.c
 tidy:
 	rm -f *~
 

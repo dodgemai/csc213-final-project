@@ -18,7 +18,7 @@
 #include "server.h"
 #include "mcache_types.h"
 
-#define _DEBUG true
+#define _DEBUG false
 /* NOTE: maybe don't actually need g_child_socks -- we will see.
 * we can keep for now, but I really don't foresee a need for it to exist
 */
@@ -130,20 +130,6 @@ int main(void) {
 void* child_thread_fn(void* arg) {
   int s = ((socket_arg_t*)arg)->socket;
 
-  // Duplicate the socket_fd so we can open it twice, once for input and once for output
-  //int socket_fd_copy = dup(s);
-  //if(socket_fd_copy == -1) {
-  //  return NULL;
-  //}
-
-  // Open the socket as a FILE stream so we can use fgets
-  //  FILE* input = fdopen(socket_fd_copy, "r");
-
-  // Check for errors
-  //if(input == NULL) {
-  //  return NULL;
-  //}
-
   while(g_active) {
 
     uint16_t msg_len;
@@ -155,11 +141,12 @@ void* child_thread_fn(void* arg) {
 
       line[msg_len - 1] = '\0';
 
-      //remove newline char
-      //trim_message(line);
 
       //parse query and handle request appropriately
       parse_query(line, s);
+
+      //drop that line!!
+      free(line);
     }
   }
 
@@ -237,8 +224,9 @@ void parse_set(char* args) {
     return;
   }
 
-  //evict until there's enough space for allocated
+  //evict until there's enough space new object
   while(g_memory_allocated + data_length > MCACHE_MAX_ALLOCATION) {
+    //grab the last recently used object
     key_data_t* polled = klist_poll(&g_keys);
 
     //update memory_allocated
@@ -295,11 +283,38 @@ void parse_add(char* args) {
   size_t data_length = mcache_data_len(rest);
 
   //allocate and fill data
-  void* data = malloc(sizeof(data_length));
+  void* data = malloc(data_length);
   memcpy(data, rest, data_length);
+
+  //if object size is greater than storage space, don't store it
+  if(data_length > MCACHE_MAX_ALLOCATION) {
+    return;
+  }
+
+  //evict until there's enough space for new object
+  while(g_memory_allocated + data_length > MCACHE_MAX_ALLOCATION) {
+    //grab the last recently used object
+    key_data_t* polled = klist_poll(&g_keys);
+
+    //update memory_allocated
+    g_memory_allocated -= polled->data_size;
+
+    //remove this evicted thing from hmap
+    hashmap_remove(&g_hmap, polled->key);
+    if(_DEBUG) { printf("Evicted key: %s, freeing %zu bytes.\n", polled->key, polled->data_size); }
+
+    //free stuff
+    free(polled->key);
+    free(polled);
+  }
 
   //update global memory allocation
   g_memory_allocated += data_length;
+
+  if(_DEBUG) {
+    printf("Total memory allocated: %lu\n", g_memory_allocated);
+    printf("Total keys stored: %zu\n", g_keys.length);
+  }
 
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
@@ -352,6 +367,20 @@ void parse_gets(char* args, int socket) {
 }
 
 void parse_delete(char* args) {
+  //remove key from eviction list
+  key_data_t* key_data = klist_remove(&g_keys, args);
+
+  //key not found, nothing to remove
+  if(key_data == NULL) { return; }
+
+  //update global mem allocated
+  g_memory_allocated -= key_data->data_size;
+
+  //free necessary key_data stuff
+  free(key_data->key);
+  free(key_data);
+
+  //remove key/value from hashmap
   hashmap_remove(&g_hmap, args);
 }
 
@@ -364,6 +393,7 @@ size_t mcache_data_len(char* message) {
   }
 }
 
+//Move a key to the back of the eviction queue
 void touch_key(char* key, size_t obj_size) {
   klist_add(&g_keys, key, obj_size);
 }

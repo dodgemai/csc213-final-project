@@ -46,6 +46,9 @@ extern "C" {
   //remove element from klist
   key_data_t* klist_poll(key_list_t* klist);
 
+  //remove specific element from klist
+  key_data_t* klist_remove(key_list_t* klist, char* key);
+
   // This makes the header file work for both C and C++
 #ifdef __cplusplus
 }

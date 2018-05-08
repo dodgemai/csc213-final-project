@@ -120,3 +120,37 @@ key_data_t* klist_poll(key_list_t* klist) {
 
   return ret;
 }
+
+key_data_t* klist_remove(key_list_t* klist, char* key) {
+  key_node_t* cur = klist->first;
+  key_data_t* ret = NULL;
+  if(cur != NULL) {
+    //is the first entry a match?
+    if(strcmp(cur->data->key, key) == 0) {
+      klist->first = cur->next;
+      ret = cur->data;
+      free(cur);
+      cur = NULL;
+      klist->length--;
+    }
+
+    //check the rest for match
+    while(cur != NULL) {
+      if(strcmp(cur->data->key, key) == 0) {
+        cur->prev->next = cur->next;
+        if(cur->next != NULL) {
+          cur->next->prev = cur->prev;
+        } else {
+          klist->last = cur->prev;
+        }
+        ret = cur->data;
+        free(cur);
+        klist->length--;
+        break;
+      }
+      cur = cur->next;
+    }
+  }
+
+  return ret;
+}

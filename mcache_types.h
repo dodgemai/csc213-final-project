@@ -12,6 +12,8 @@ extern "C" {
 
   //special byte to specify end of message
   #define MCACHE_END_BUFF 0x0c001be9
+
+  //max number of bytes held by this cache
   #define MCACHE_MAX_ALLOCATION 100
 
   typedef struct byte_sequence {

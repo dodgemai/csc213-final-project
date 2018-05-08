@@ -1,4 +1,4 @@
-CFLAGS=-Wall -std=gnu99 -g  # -fsanitize=address
+CFLAGS=-Wall -std=gnu99 -g -fsanitize=address
 CC=clang
 
 .PHONY: all tidy clean
@@ -16,7 +16,8 @@ hashmap_test: hashmap_test.c hashmap.h hashmap.c entry_list.h entry_list.c mcach
 
 client: client.c server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_list.c entry_list.h mcache_types.h mcache.h mcache.c
 	${CC} ${CFLAGS} -o client client.c mcache.c
-
+client_old: client_basic.c server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_list.c entry_list.h mcache_types.h mcache.h mcache.c
+	${CC} ${CFLAGS} -o client_old client_basic.c mcache.c
 tidy:
 	rm -f *~
 

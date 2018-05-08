@@ -70,8 +70,10 @@ void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
   memcpy(message + keylen + data.length + 5, &delimiter, 4);
   message[keylen + data.length + 9] = '\n';
 
+  uint16_t message_size = (uint16_t)htons(messagelen);
+  write(s, &message_size, 2); //write the data size to the server
   //send message to mcache server
-  write(s, message, messagelen);
+  write(s, message, messagelen); //write the actual message to the server
 }
 
 //Note: internally equivalent to set
@@ -102,6 +104,9 @@ void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
   memcpy(message + keylen + data.length + 5, &delimiter, 4);
   message[keylen + data.length + 9] = '\n';
 
+  uint16_t message_size = (uint16_t)htons(messagelen);
+  write(s, &message_size, 2); //write the data size to the server
+
   //send message to mcache server
   write(s, message, messagelen);
 }
@@ -125,6 +130,9 @@ void* mcache_get(char* key) {
 
   //replace null terminator with newline character
   message[keylen + 4] = '\n';
+
+  uint16_t message_size = (uint16_t)htons(messagelen);
+  write(s, &message_size, 2); //write the data size to the server
 
   //send message to mcache server
   write(s, message, messagelen);
@@ -168,6 +176,9 @@ void mcache_delete(char* key) {
   //replace null terminator with newline character
   message[keylen + 7] = '\n';
 
+  uint16_t message_size = (uint16_t)htons(messagelen);
+  write(s, &message_size, 2); //write the data size to the server
+  
   //send message to mcache server
   write(s, message, messagelen);
 }

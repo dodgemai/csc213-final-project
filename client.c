@@ -1,48 +1,38 @@
 #include "mcache.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <unistd.h>
 
-
-void print_big_struct(big_struct_t* s) {
-  printf("i1 = %d\n i2 = %d\n c = %c\n str = %s\n\n", s->i1, s->i2, s->c, s->str);
-}
 int main(void) {
   mcache_init("localhost");
-  //byte_sequence_t* formatted_test = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
-  char* test = strdup("value1");
 
-  printf("Testing with char*...\n");
-  printf("Set as: %s\n", test);
-  mcache_set("key1", test, strlen(test) + 1); // + 1 for null terminator
+  printf("Testing with int values...\n");
+  for(int i = 0; i <= 9999; i++) {
+    char key[25];
+    sprintf(key, "key%d", i);
+    mcache_set(key, &(i), sizeof(i));
+    //printf("%s: %d\n", key, *(int*)mcache_get(key));
+    assert(*((int*)mcache_get(key)) == i);
+  }
 
-  char* v1 = mcache_get("key1");
+  printf("Testing for proper eviction...\n");
+  int successful_gets = 0;
+  for(int i = 0; i <= 9999; i++) {
+    char key[25];
+    sprintf(key, "key%d", i);
+    int* val;
+    if((val = mcache_get(key)) != NULL) {
+      assert(*val == i);
+      //printf("Successfully got %d\n", i);
+      successful_gets++;
+    }
+  }
 
-  printf("Retrieved as: %s\n\n", v1);
-
-  //NOTE user is responsible for freeing returned data!!!
-  free(v1);
-
-  printf("Testing with struct...\n");
-  printf("Added as: ");
-
-  //set up struct with some values
-  big_struct_t test2 = {
-    .i1 = 1,
-    .i2 = 69,
-    .c = 'g'
-  };
-  test2.str[0] = 'h';
-  test2.str[1] = 'i';
-  test2.str[2] = '\0';
-
-  print_big_struct(&test2);
-  mcache_set("key2", &test2, sizeof(test2));
-
-  big_struct_t* v2 = mcache_get("key2");
-
-  printf("Retrieved as: ");
-  print_big_struct(v2);
-  free(v2);
+  assert(successful_gets == MCACHE_MAX_ALLOCATION / 4);
+  //printf("Successful gets: %d\n", successful_gets);
+  printf("All tests successful.\n");
 
   mcache_exit();
 }

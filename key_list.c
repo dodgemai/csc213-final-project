@@ -20,17 +20,22 @@ void klist_destroy(key_list_t* klist) {
 
 void knode_destroy(key_node_t* knode) {
   if(knode != NULL) {
-    free(knode->data);
+    //free(knode->data->key);
+    //free(knode->data);
     free(knode);
   }
 }
 
 key_node_t* knode_make(char* element, size_t obj_size, key_node_t* prev, key_node_t* next) {
+
   //allocate space for node
   key_node_t* ret = (key_node_t*) malloc(sizeof(key_node_t));
 
+  //allocate space for key_data
+  ret->data = malloc(sizeof(key_data_t));
+
   //fill in data for node
-  ret->data->key = element;
+  ret->data->key = strdup(element);
   ret->data->data_size = obj_size;
 
   //fill in prev and next
@@ -43,21 +48,31 @@ key_node_t* knode_make(char* element, size_t obj_size, key_node_t* prev, key_nod
 void klist_add(key_list_t* klist, char* element, size_t obj_size) {
   /* Iterate through and remove duplicate keys */
   key_node_t* cur = klist->first;
-  if(strcmp(cur->data->key, element) == 0) {
-    knode_destroy(cur);
-    klist->first = NULL;
-  }
-
-  while(cur != NULL) {
+  if(cur != NULL) {
+    //is the first entry a duplicate?
     if(strcmp(cur->data->key, element) == 0) {
-      cur->prev->next = cur->next;
-      cur->next->prev = cur->prev;
+      klist->first = cur->next;
       knode_destroy(cur);
-      break;
+      cur = NULL;
+      klist->length--;
     }
-    cur = cur->next;
-  }
 
+    //check the rest for duplicates
+    while(cur != NULL) {
+      if(strcmp(cur->data->key, element) == 0) {
+        cur->prev->next = cur->next;
+        if(cur->next != NULL) {
+          cur->next->prev = cur->prev;
+        } else {
+          klist->last = cur->prev;
+        }
+        knode_destroy(cur);
+        klist->length--;
+        break;
+      }
+      cur = cur->next;
+    }
+  }
   /* Add key to the front of the queue */
   key_node_t* to_add = knode_make(element, obj_size, NULL, klist->first);
 
@@ -91,6 +106,7 @@ key_data_t* klist_poll(key_list_t* klist) {
     knode_destroy(klist->last);
     klist->last = NULL;
     klist->first = NULL;
+    klist->length--;
     return ret;
   }
 

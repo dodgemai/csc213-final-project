@@ -12,7 +12,7 @@ extern "C" {
 
   //special byte to specify end of message
   #define MCACHE_END_BUFF 0x0c001be9
-  #define MCACHE_MAX_ALLOCATION 1000
+  #define MCACHE_MAX_ALLOCATION 100
 
   typedef struct byte_sequence {
     void* data; /* points to the actual byte sequence */

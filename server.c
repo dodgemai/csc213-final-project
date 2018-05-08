@@ -131,34 +131,36 @@ void* child_thread_fn(void* arg) {
   int s = ((socket_arg_t*)arg)->socket;
 
   // Duplicate the socket_fd so we can open it twice, once for input and once for output
-  int socket_fd_copy = dup(s);
-  if(socket_fd_copy == -1) {
-    return NULL;
-  }
+  //int socket_fd_copy = dup(s);
+  //if(socket_fd_copy == -1) {
+  //  return NULL;
+  //}
 
   // Open the socket as a FILE stream so we can use fgets
-  FILE* input = fdopen(socket_fd_copy, "r");
+  //  FILE* input = fdopen(socket_fd_copy, "r");
 
   // Check for errors
-  if(input == NULL) {
-    return NULL;
-  }
+  //if(input == NULL) {
+  //  return NULL;
+  //}
 
   while(g_active) {
 
-    char* line = NULL;
-    size_t linecap = 0;
-    if(getline(&line, &linecap, input) == -1) {
-      return NULL;
+    uint16_t msg_len;
+    if(read(s, &msg_len, 2) > 0) {
+      msg_len = ntohs(msg_len);
+
+      char* line = malloc(msg_len);
+      read(s, line, msg_len);
+
+      line[msg_len - 1] = '\0';
+
+      //remove newline char
+      //trim_message(line);
+
+      //parse query and handle request appropriately
+      parse_query(line, s);
     }
-
-    //remove newline char
-    trim_message(line);
-
-    //parse query and handle request appropriately
-    parse_query(line, s);
-
-    free(line);
   }
 
   return NULL;
@@ -173,10 +175,14 @@ void trim_message(char* message) {
 
 //NOTE: directly modifies query, must not be string literal
 void parse_query(char* query, int socket) {
-  printf("Received query: %s\n", query);
+  if(_DEBUG) {printf("Received query: %s\n", query); }
 
   //get command str and args
   char* args = strchr(query, ' ');
+  if(args == NULL) {
+    fprintf(stderr, "Invalid query received. Given %s\n", query);
+    raise(SIGINT);
+  }
   *args = '\0';
   args++;
 
@@ -240,6 +246,7 @@ void parse_set(char* args) {
 
     //remove this evicted thing from hmap
     hashmap_remove(&g_hmap, polled->key);
+    if(_DEBUG) { printf("Evicted key: %s, freeing %zu bytes.\n", polled->key, polled->data_size); }
 
     //free stuff
     free(polled->key);
@@ -248,6 +255,11 @@ void parse_set(char* args) {
 
   //update global memory allocation
   g_memory_allocated += data_length;
+
+  if(_DEBUG) {
+    printf("Total memory allocated: %lu\n", g_memory_allocated);
+    printf("Total keys stored: %zu\n", g_keys.length);
+  }
 
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
@@ -310,24 +322,25 @@ void parse_get(char* args, int socket) {
   byte_sequence_t* value = hashmap_get(&g_hmap, args);
 
   if(value == NULL) {
-    write(socket, "-1", 2);
+    int16_t fail_msg = (int16_t)htons(-1);
+    write(socket, &fail_msg, 2);
   } else {
     /*
-  //NOTE TODO inefficient potentially?? have to copy data potench unnecessarily
-  size_t messagelen = 2 + value->length; //2 byte size, and then pointer to the start of data strm
-  void* message = malloc(messagelen); //malloc space for message
-  memcpy(message, &(value->length), 2);
-  memcpy(message, value->data, value->length);
+    //NOTE TODO inefficient potentially?? have to copy data potench unnecessarily
+    size_t messagelen = 2 + value->length; //2 byte size, and then pointer to the start of data strm
+    void* message = malloc(messagelen); //malloc space for message
+    memcpy(message, &(value->length), 2);
+    memcpy(message, value->data, value->length);
 
-  write(socket, message, messagelen);
-  */
-  int16_t datalen = (int16_t)htons(value->length); //NOTE TODO limited to 16 bits of length!!!!!!
+    write(socket, message, messagelen);
+    */
+    int16_t datalen = (int16_t)htons(value->length); //NOTE TODO limited to 16 bits of length!!!!!!
 
-  //update keys queue
-  touch_key(args, value->length);
+    //update keys queue
+    touch_key(args, value->length);
 
-  write(socket, &(datalen), 2);
-  write(socket, value->data, value->length);
+    write(socket, &datalen, 2);
+    write(socket, value->data, value->length);
   }
 }
 

@@ -29,7 +29,7 @@ void elist_destroy(entry_list_t* elist) {
   }
 }
 
-// Allocate memory and create a node for entry 
+// Allocate memory and create a node for entry
 entry_node_t* make_entry_node(char* key, byte_sequence_t* element, entry_node_t* next) {
   entry_node_t* node = (entry_node_t*) malloc(sizeof(entry_node_t));
   if(node == NULL) {
@@ -98,7 +98,7 @@ void elist_remove(entry_list_t* elist, char* key) {
   entry_node_t* prev = NULL;
   while(cur != NULL) {
     //if found, remove
-    if(cur->key == key) {
+    if(strcmp(cur->key, key) == 0) {
       elist->length--;
       if(prev == NULL) {
         elist->first = NULL; //if no prev, list is empty

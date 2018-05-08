@@ -34,6 +34,9 @@ extern "C" {
   // Push an element onto a elist
   void elist_push(entry_list_t* elist, char* key, byte_sequence_t* element);
 
+  // Push an element onto an elist if it does not already exist
+  void elist_offer(entry_list_t* elist, char* key, byte_sequence_t* element);
+
   // Push a unique element onto a elist
   void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element);
 

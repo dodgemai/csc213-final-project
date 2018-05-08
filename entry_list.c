@@ -50,7 +50,35 @@ void elist_push(entry_list_t* elist, char* key, byte_sequence_t* element) {
   elist->length++;
 }
 
-// Push a unique element onto a elist
+// Push an element onto an elist if it does not already exist
+void elist_offer(entry_list_t* elist, char* key, byte_sequence_t* element) {
+  if(elist == NULL) { return; }
+  if(elist_empty(elist)) {
+    elist_push(elist, key, element);
+  }
+
+  entry_node_t* cur = elist->first;
+  for(int i = 0; i < elist->length; i++) {
+    int comp_val = strcmp(cur->key, key);
+    if(comp_val == 0) {
+      return;
+    } else if(comp_val < 0) {
+      entry_node_t* to_add = make_entry_node(key, element, cur->next);
+      cur->next = to_add;
+      elist->length++;
+      return;
+    }
+    if(cur->next != NULL) {
+      cur = cur->next;
+    } else {
+      entry_node_t* to_add = make_entry_node(key, element, NULL);
+      cur->next = to_add;
+      elist->length++;
+      return;
+    }
+  }
+}
+// Push a unique element onto a elist, overwrite if exists
 void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element) {
   if(elist == NULL) { return; }
   if(elist_empty(elist)) {

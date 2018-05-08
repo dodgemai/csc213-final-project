@@ -55,6 +55,9 @@ extern "C" {
   // Put element into map -- if key already exists, update value
   void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value);
 
+  // Put an element into the map -- if key already exists, exit
+  void hashmap_offer(hashmap_t* map, char* key, byte_sequence_t* value);
+
   // Remove an element from map
   void hashmap_remove(hashmap_t* map, char* key);
 

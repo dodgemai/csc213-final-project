@@ -79,7 +79,7 @@ void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
     exit(EXIT_FAILURE);
   }
   memcpy(data, data_ptr, num_bytes);
-  
+
   formatted_data->data = data;
   formatted_data->length = num_bytes;
 
@@ -89,9 +89,53 @@ void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
   touch_key(key, num_bytes);
 }
 
-//Note: internally equivalent to set
+
 void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
-  mcache_set(key, data_ptr, num_bytes);
+  //if object size is greater than storage space, don't store it
+  if(num_bytes > MCACHE_MAX_ALLOCATION) {
+    return;
+  }
+
+  //evict until there's enough space for new object
+  while(g_memory_allocated + num_bytes > MCACHE_MAX_ALLOCATION) {
+    //grab the last recently used object
+    key_data_t* polled = klist_poll(&g_keys);
+
+    //update memory_allocated
+    g_memory_allocated -= polled->data_size;
+
+    //remove from hashmap
+    hashmap_remove(&g_hmap, polled->key);
+
+    //free stuff
+    free(polled->key);
+    free(polled);
+  }
+
+  //update global memory allocation
+  g_memory_allocated += num_bytes;
+
+  byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
+  if(formatted_data == NULL) {
+    fprintf(stderr, "Failed to allocate memory for data.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  //copy data_ptr value for cache storage
+  void* data = malloc(num_bytes);
+  if(data == NULL) {
+    fprintf(stderr, "failed to allocate memory for data\n");
+    exit(EXIT_FAILURE);
+  }
+  memcpy(data, data_ptr, num_bytes);
+
+  formatted_data->data = data;
+  formatted_data->length = num_bytes;
+
+  hashmap_offer(&g_hmap, key, formatted_data);
+
+  //update keys queue
+  touch_key(key, num_bytes);
 }
 
 // Gets a value from the mcache by key

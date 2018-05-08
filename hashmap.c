@@ -31,7 +31,7 @@ bucket_t* bucket_init(void) {
 
   //initialize mutex lock
   pthread_mutex_init(&ret->m, NULL);
-  
+
   return ret;
 }
 
@@ -133,11 +133,45 @@ void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value) {
     _bucket = *(map->table + index);
   }
 
+  //save current len
+  size_t tmplen = _bucket->elist->length;
+
   pthread_mutex_lock(&_bucket->m);
   //if bucket already exists, add key-value pair
   elist_push_unique(_bucket->elist, key, value);
   pthread_mutex_unlock(&_bucket->m);
-  map->size_used++;
+
+  //update size_used if necessary
+  if(tmplen < _bucket->elist->length) {
+    map->size_used++;
+  }
+}
+
+// Put an element into the map -- if key already exists, exit
+void hashmap_offer(hashmap_t* map, char* key, byte_sequence_t* value) {
+  if(map == NULL) { return; }
+  unsigned int index = hash(key) % map->capacity;
+
+  bucket_t* _bucket = *(map->table + index);
+
+  //if bucket doesn't exist, make one and add key-value pair
+  if(_bucket == NULL) {
+    *(map->table + index) = bucket_init();
+    _bucket = *(map->table + index);
+  }
+
+  //store current len
+  size_t tmplen = _bucket->elist->length;
+
+  pthread_mutex_lock(&_bucket->m);
+  //if bucket already exists, add key-value pair
+  elist_offer(_bucket->elist, key, value);
+  pthread_mutex_unlock(&_bucket->m);
+
+  //update size_used if necessary
+  if(tmplen < _bucket->elist->length) {
+    map->size_used++;
+  }
 }
 
 // Remove an element from map

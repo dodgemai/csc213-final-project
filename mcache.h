@@ -12,7 +12,7 @@ void mcache_init(char* server_address);
 // Adds data into the mcache -- if the key already exists, update value
 void mcache_set(char* key, void* data_ptr, size_t data_len);
 
-// Adds data into the mcache -- if the key already exists, update value
+// Adds data into the mcache if the key does not already exist
 void mcache_add(char* key, void* data_ptr, size_t data_len);
 
 // Gets a value from the mcache by key

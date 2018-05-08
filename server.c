@@ -181,7 +181,7 @@ void parse_query(char* query, int socket) {
     return parse_set(args);
   } else if(strcmp(query, "add") == 0) {
     if(_DEBUG) { printf("Received add command.\n"); }
-    return parse_set(args); //TODO NOTE URGENT CHANGE TO ADD
+    return parse_add(args); 
   } else if(strcmp(query, "get") == 0) {
     if(_DEBUG) { printf("Received get command.\n"); }
     return parse_get(args, socket);
@@ -291,7 +291,7 @@ void parse_add(char* args) {
     return;
   }
 
-  //evict until there's enough space for new object
+  //evict until there's enough space new object
   while(g_memory_allocated + data_length > MCACHE_MAX_ALLOCATION) {
     //grab the last recently used object
     key_data_t* polled = klist_poll(&g_keys);
@@ -325,7 +325,8 @@ void parse_add(char* args) {
   formatted_data->data = data;
   formatted_data->length = data_length;
 
-  hashmap_put(&g_hmap, key, formatted_data);
+  //try to store key
+  hashmap_offer(&g_hmap, key, formatted_data);
 
   //update keys queue
   touch_key(key, data_length);

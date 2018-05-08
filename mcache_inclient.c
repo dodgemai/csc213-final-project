@@ -71,11 +71,15 @@ void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
     fprintf(stderr, "Failed to allocate memory for data.\n");
     exit(EXIT_FAILURE);
   }
+
+  //copy data_ptr value for cache storage
   void* data = malloc(num_bytes);
   if(data == NULL) {
     fprintf(stderr, "failed to allocate memory for data\n");
     exit(EXIT_FAILURE);
   }
+  memcpy(data, data_ptr, num_bytes);
+  
   formatted_data->data = data;
   formatted_data->length = num_bytes;
 

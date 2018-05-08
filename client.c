@@ -14,6 +14,7 @@ int main(void) {
     sprintf(key, "key%d", i);
     mcache_set(key, &(i), sizeof(i));
     //printf("%s: %d\n", key, *(int*)mcache_get(key));
+    //printf("Got value %d from key %s.\n", *(int*)mcache_get(key), key);
     assert(*((int*)mcache_get(key)) == i);
   }
 

@@ -3,7 +3,7 @@ CC=clang
 
 .PHONY: all tidy clean
 
-all: server client
+all: server client client_in_process
 
 server: server.c server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_list.c entry_list.h mcache_types.h mcache.h mcache.c key_list.c key_list.h
 	${CC} ${CFLAGS} -o server server.c socket_list.c hashmap.c entry_list.c mcache.c key_list.c
@@ -27,6 +27,8 @@ tidy:
 clean: tidy
 	rm -f server
 	rm -f client
+	rm -f client_old
+	rm -f client_in_process
 	rm -f hashmap_test
 	rm -f server_test
 	rm -rf ./*.dSYM

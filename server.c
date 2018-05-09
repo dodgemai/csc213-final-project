@@ -39,23 +39,32 @@ void trim_message(char* message);
 * of context of mcache data being sent over tcp connection
 */
 size_t mcache_data_len(char* message);
+
+//parse query and call correct sub-function
 void parse_query(char* query, int socket);
+
+//parse_<exp>, and make appropriate calls to deal with query
 void parse_set(char* args);
 void parse_add(char* args);
 void parse_get(char* args, int socket);
 void parse_gets(char* args, int socket);
 void parse_delete(char* args);
+
+//update key_list so key is now back to the back of the eviction queue
+//basically just updating this key so it's the last to be evicted
 void touch_key(char* key, size_t obj_size);
+
 //handle dumb SIGPIPE signal
 void handler(int s) { }
 
 //global values
-socket_list_t g_child_socks;
-hashmap_t g_hmap;
-bool g_active;
-key_list_t g_keys;
-size_t g_memory_allocated;
+socket_list_t g_child_socks; //deal with child sockets
+hashmap_t g_hmap; //hashmap -- where key/val pairs are stored
+bool g_active; //server is running
+key_list_t g_keys; //eviction queue -- kept by keys
+size_t g_memory_allocated; //keep track of total mem allocated by cache
 
+//for passing socket to child_thread_fn
 typedef struct socket_arg {
   int socket;
 } socket_arg_t;
@@ -153,6 +162,7 @@ void* child_thread_fn(void* arg) {
   return NULL;
 }
 
+//remove newline character from message, replace with null byte
 void trim_message(char* message) {
   char* to_remove = strchr(message, '\n');
   if(to_remove != NULL) {
@@ -181,7 +191,7 @@ void parse_query(char* query, int socket) {
     return parse_set(args);
   } else if(strcmp(query, "add") == 0) {
     if(_DEBUG) { printf("Received add command.\n"); }
-    return parse_add(args); 
+    return parse_add(args);
   } else if(strcmp(query, "get") == 0) {
     if(_DEBUG) { printf("Received get command.\n"); }
     return parse_get(args, socket);
@@ -386,6 +396,8 @@ void parse_delete(char* args) {
 }
 
 /* Note -- could replace this with just newline character?? */
+//get the length of the data -- iterate through until you find a 32 byte chunk
+//equal to MCACHE_END_BUFF
 size_t mcache_data_len(char* message) {
   for(int i = 0; /* no cond */; i++) {
     if(*(uint32_t*)(message + i) == MCACHE_END_BUFF) {

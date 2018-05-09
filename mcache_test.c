@@ -5,11 +5,18 @@
 #include <assert.h>
 #include <unistd.h>
 
-int main(void) {
+int main(int argc, char** argv) {
+  if(argc != 2) {
+    fprintf(stderr, "usage: %s <num-to-test>\n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+  int num_vals = atoi(argv[1]);
+  if(num_vals <= 0) { return 2; }
+
   mcache_init("localhost");
 
   printf("Testing with int values...\n");
-  for(int i = 0; i <= 9999; i++) {
+  for(int i = 0; i <= num_vals; i++) {
     char key[25];
     sprintf(key, "key%d", i);
     mcache_add(key, &(i), sizeof(i));
@@ -20,7 +27,7 @@ int main(void) {
 
   printf("Testing for proper eviction...\n");
   int successful_gets = 0;
-  for(int i = 0; i <= 9999; i++) {
+  for(int i = 0; i <= num_vals; i++) {
     char key[25];
     sprintf(key, "key%d", i);
     int* val;
@@ -30,9 +37,10 @@ int main(void) {
       successful_gets++;
     }
   }
-
-  assert(successful_gets == MCACHE_MAX_ALLOCATION / 4);
   //printf("Successful gets: %d\n", successful_gets);
+  assert((successful_gets == MCACHE_MAX_ALLOCATION / 4)
+          || successful_gets == num_vals + 1);
+
   printf("All tests successful.\n");
 
   mcache_exit();

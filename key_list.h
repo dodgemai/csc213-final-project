@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 /*
- * Basically a queue w/ first and last ptr
+ * Doubly linked queue
  */
 
 // This makes the header file work for both C and C++
@@ -37,13 +37,13 @@ extern "C" {
   // Destroy a klist
   void klist_destroy(key_list_t* klist);
 
-  // Push an element onto a klist
+  // Push an element onto the front of a klist
   void klist_add(key_list_t* klist, char* element, size_t obj_size);
 
   // Check if a klist is empty
   bool klist_empty(key_list_t* klist);
 
-  //remove element from klist
+  //pop the last element off of the klist
   key_data_t* klist_poll(key_list_t* klist);
 
   //remove specific element from klist

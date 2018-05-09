@@ -3,12 +3,16 @@
 #include <stdint.h>
 #include <string.h>
 
+//NOTE TODO MAKE KEY LIST THREAD-SAFE!!!!
 
+//init a key list
 void klist_init(key_list_t* klist) {
   klist->first = NULL;
+  klist->last = NULL;
   klist->length = 0;
 }
 
+//destroy a key list
 void klist_destroy(key_list_t* klist) {
   key_node_t* cur = klist->first;
   while(cur != NULL) {
@@ -18,14 +22,16 @@ void klist_destroy(key_list_t* klist) {
   }
 }
 
+//destroy a key node
 void knode_destroy(key_node_t* knode) {
   if(knode != NULL) {
-    //free(knode->data->key);
-    //free(knode->data);
+    free(knode->data->key);
+    free(knode->data);
     free(knode);
   }
 }
 
+//make a key node
 key_node_t* knode_make(char* element, size_t obj_size, key_node_t* prev, key_node_t* next) {
 
   //allocate space for node
@@ -45,6 +51,7 @@ key_node_t* knode_make(char* element, size_t obj_size, key_node_t* prev, key_nod
   return ret;
 }
 
+// Push an element onto the front of a klist
 void klist_add(key_list_t* klist, char* element, size_t obj_size) {
   /* Iterate through and remove duplicate keys */
   key_node_t* cur = klist->first;
@@ -85,12 +92,13 @@ void klist_add(key_list_t* klist, char* element, size_t obj_size) {
   klist->length++;
 }
 
-
+// Check if a klist is empty
 bool klist_empty(key_list_t* klist) {
   if(klist == NULL) { return true; }
   return klist->first == NULL;
 }
 
+//pop the last element off of the klist -- User is responsible for freeing data
 key_data_t* klist_poll(key_list_t* klist) {
   //no list
   if(klist == NULL) { return NULL; }
@@ -103,7 +111,7 @@ key_data_t* klist_poll(key_list_t* klist) {
 
   //singleton list
   if(new_last == NULL) {
-    knode_destroy(klist->last);
+    free(klist->last); //note user must free the rest of the data
     klist->last = NULL;
     klist->first = NULL;
     klist->length--;
@@ -113,7 +121,7 @@ key_data_t* klist_poll(key_list_t* klist) {
   //'normal' list (ie length > 1)
   new_last->next = NULL;
 
-  knode_destroy(klist->last);
+  free(klist->last); //note user must free the rest of the data
 
   klist->last = new_last;
   klist->length--;
@@ -121,6 +129,7 @@ key_data_t* klist_poll(key_list_t* klist) {
   return ret;
 }
 
+//remove specific element from klist
 key_data_t* klist_remove(key_list_t* klist, char* key) {
   key_node_t* cur = klist->first;
   key_data_t* ret = NULL;

@@ -42,7 +42,7 @@ entry_node_t* make_entry_node(char* key, byte_sequence_t* element, entry_node_t*
   return node;
 }
 
-// Push an element onto a elist
+// Push an element onto an elist
 void elist_push(entry_list_t* elist, char* key, byte_sequence_t* element) {
   if(elist == NULL) { return; }
   entry_node_t* to_add = make_entry_node(key, element, elist->first);

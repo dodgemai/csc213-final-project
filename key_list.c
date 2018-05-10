@@ -3,10 +3,11 @@
 #include <stdint.h>
 #include <string.h>
 
-//NOTE TODO MAKE KEY LIST THREAD-SAFE!!!!
+//NOTE TODO make thread-safety a little less shittily/lazily implemented
 
 //init a key list
 void klist_init(key_list_t* klist) {
+  pthread_mutex_init(&klist->m, NULL);
   klist->first = NULL;
   klist->last = NULL;
   klist->length = 0;
@@ -14,12 +15,16 @@ void klist_init(key_list_t* klist) {
 
 //destroy a key list
 void klist_destroy(key_list_t* klist) {
+  pthread_mutex_lock(&klist->m);
   key_node_t* cur = klist->first;
   while(cur != NULL) {
     key_node_t* tmp = cur->next;
     free(cur);
     cur = tmp;
   }
+  pthread_mutex_unlock(&klist->m);
+  pthread_mutex_destroy(&klist->m);
+  free(klist);
 }
 
 //destroy a key node
@@ -53,12 +58,16 @@ key_node_t* knode_make(char* element, size_t obj_size, key_node_t* prev, key_nod
 
 // Push an element onto the front of a klist
 void klist_add(key_list_t* klist, char* element, size_t obj_size) {
+  if(klist == NULL) { return; }
+
+  pthread_mutex_lock(&klist->m);
   /* Iterate through and remove duplicate keys */
   key_node_t* cur = klist->first;
   if(cur != NULL) {
     //is the first entry a duplicate?
     if(strcmp(cur->data->key, element) == 0) {
       klist->first = cur->next;
+      if(klist->first == NULL) { klist->last = NULL; }
       knode_destroy(cur);
       cur = NULL;
       klist->length--;
@@ -80,6 +89,7 @@ void klist_add(key_list_t* klist, char* element, size_t obj_size) {
       cur = cur->next;
     }
   }
+
   /* Add key to the front of the queue */
   key_node_t* to_add = knode_make(element, obj_size, NULL, klist->first);
 
@@ -90,11 +100,20 @@ void klist_add(key_list_t* klist, char* element, size_t obj_size) {
   }
   klist->first = to_add;
   klist->length++;
+
+  pthread_mutex_unlock(&klist->m);
 }
 
 // Check if a klist is empty
 bool klist_empty(key_list_t* klist) {
-  if(klist == NULL) { return true; }
+  bool ret;
+  if(klist == NULL) {
+    ret = true;
+  } else {
+    pthread_mutex_lock(&klist->m);
+    ret = klist->first == NULL;
+    pthread_mutex_unlock(&klist->m);
+  }
   return klist->first == NULL;
 }
 
@@ -102,7 +121,7 @@ bool klist_empty(key_list_t* klist) {
 key_data_t* klist_poll(key_list_t* klist) {
   //no list
   if(klist == NULL) { return NULL; }
-
+  pthread_mutex_lock(&klist->m);
   //empty list
   if(klist->last == NULL) { return NULL; }
 
@@ -125,18 +144,21 @@ key_data_t* klist_poll(key_list_t* klist) {
 
   klist->last = new_last;
   klist->length--;
-
+  pthread_mutex_unlock(&klist->m);
   return ret;
 }
 
 //remove specific element from klist
 key_data_t* klist_remove(key_list_t* klist, char* key) {
+  if(klist == NULL) { return NULL; }
+  pthread_mutex_lock(&klist->m);
   key_node_t* cur = klist->first;
   key_data_t* ret = NULL;
   if(cur != NULL) {
     //is the first entry a match?
     if(strcmp(cur->data->key, key) == 0) {
       klist->first = cur->next;
+      if(klist->first == NULL) { klist->last = NULL; }
       ret = cur->data;
       free(cur);
       cur = NULL;
@@ -160,6 +182,6 @@ key_data_t* klist_remove(key_list_t* klist, char* key) {
       cur = cur->next;
     }
   }
-
+  pthread_mutex_unlock(&klist->m);
   return ret;
 }

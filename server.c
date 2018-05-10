@@ -62,12 +62,19 @@ socket_list_t g_child_socks; //deal with child sockets
 hashmap_t g_hmap; //hashmap -- where key/val pairs are stored
 bool g_active; //server is running
 key_list_t g_keys; //eviction queue -- kept by keys
+pthread_mutex_t g_m; //lock for g_memory_allocated
 size_t g_memory_allocated; //keep track of total mem allocated by cache
 
 //for passing socket to child_thread_fn
 typedef struct socket_arg {
   int socket;
 } socket_arg_t;
+
+//for passing key_data to update_keys_fn
+typedef struct key_data_arg {
+  char* key;
+  size_t obj_size;
+} key_data_arg_t;
 
 int main(void) {
 
@@ -76,7 +83,7 @@ int main(void) {
   klist_init(&g_keys);  //prep g_keys
   g_active = true; //set server to active
   g_memory_allocated = 0; //init mem_allocated
-
+  pthread_mutex_init(&g_m, NULL); //prep mutex
   //handle SIGPIPE error, just drop it and move on it's already
   //accounted for
   signal(SIGPIPE, handler);
@@ -122,7 +129,7 @@ int main(void) {
     slist_push(&g_child_socks, child_socket);
 
     //set up child thread to get input from this connection
-    pthread_t child_thread; //TODO Fix memory leak from this-- figure out where to free it
+    pthread_t child_thread;
     socket_arg_t* arg = (socket_arg_t*)malloc(sizeof(socket_arg_t));
     arg->socket = child_socket;
 
@@ -138,6 +145,7 @@ int main(void) {
 //arg just contains the socket number
 void* child_thread_fn(void* arg) {
   int s = ((socket_arg_t*)arg)->socket;
+  free(arg);
 
   while(g_active) {
 
@@ -149,7 +157,6 @@ void* child_thread_fn(void* arg) {
       read(s, line, msg_len);
 
       line[msg_len - 1] = '\0';
-
 
       //parse query and handle request appropriately
       parse_query(line, s);
@@ -234,16 +241,19 @@ void parse_set(char* args) {
     return;
   }
 
+
   //evict until there's enough space new object
   while(g_memory_allocated + data_length > MCACHE_MAX_ALLOCATION) {
     //grab the last recently used object
     key_data_t* polled = klist_poll(&g_keys);
 
+    pthread_mutex_lock(&g_m);
     //update memory_allocated
     g_memory_allocated -= polled->data_size;
 
     //remove this evicted thing from hmap
     hashmap_remove(&g_hmap, polled->key);
+    pthread_mutex_unlock(&g_m);
     if(_DEBUG) { printf("Evicted key: %s, freeing %zu bytes.\n", polled->key, polled->data_size); }
 
     //free stuff
@@ -252,7 +262,9 @@ void parse_set(char* args) {
   }
 
   //update global memory allocation
+  pthread_mutex_lock(&g_m);
   g_memory_allocated += data_length;
+  pthread_mutex_unlock(&g_m);
 
   if(_DEBUG) {
     printf("Total memory allocated: %lu\n", g_memory_allocated);
@@ -301,16 +313,20 @@ void parse_add(char* args) {
     return;
   }
 
+
   //evict until there's enough space new object
   while(g_memory_allocated + data_length > MCACHE_MAX_ALLOCATION) {
     //grab the last recently used object
     key_data_t* polled = klist_poll(&g_keys);
 
+    pthread_mutex_lock(&g_m);
     //update memory_allocated
     g_memory_allocated -= polled->data_size;
 
     //remove this evicted thing from hmap
     hashmap_remove(&g_hmap, polled->key);
+    pthread_mutex_unlock(&g_m);
+
     if(_DEBUG) { printf("Evicted key: %s, freeing %zu bytes.\n", polled->key, polled->data_size); }
 
     //free stuff
@@ -319,7 +335,9 @@ void parse_add(char* args) {
   }
 
   //update global memory allocation
+  pthread_mutex_lock(&g_m);
   g_memory_allocated += data_length;
+  pthread_mutex_unlock(&g_m);
 
   if(_DEBUG) {
     printf("Total memory allocated: %lu\n", g_memory_allocated);
@@ -351,15 +369,6 @@ void parse_get(char* args, int socket) {
     int16_t fail_msg = (int16_t)htons(-1);
     write(socket, &fail_msg, 2);
   } else {
-    /*
-    //NOTE TODO inefficient potentially?? have to copy data potench unnecessarily
-    size_t messagelen = 2 + value->length; //2 byte size, and then pointer to the start of data strm
-    void* message = malloc(messagelen); //malloc space for message
-    memcpy(message, &(value->length), 2);
-    memcpy(message, value->data, value->length);
-
-    write(socket, message, messagelen);
-    */
     int16_t datalen = (int16_t)htons(value->length); //NOTE TODO limited to 16 bits of length!!!!!!
 
     //update keys queue
@@ -377,22 +386,26 @@ void parse_gets(char* args, int socket) {
   //TODO actually do this
 }
 
+
+
 void parse_delete(char* args) {
-  //remove key from eviction list
+  //remove key from eviction list //TODO remove in parallel for efficiency
   key_data_t* key_data = klist_remove(&g_keys, args);
 
   //key not found, nothing to remove
   if(key_data == NULL) { return; }
 
   //update global mem allocated
+  pthread_mutex_lock(&g_m);
   g_memory_allocated -= key_data->data_size;
+
+  //remove key/value from hashmap
+  hashmap_remove(&g_hmap, args);
+  pthread_mutex_unlock(&g_m);
 
   //free necessary key_data stuff
   free(key_data->key);
   free(key_data);
-
-  //remove key/value from hashmap
-  hashmap_remove(&g_hmap, args);
 }
 
 /* Note -- could replace this with just newline character?? */
@@ -406,7 +419,34 @@ size_t mcache_data_len(char* message) {
   }
 }
 
-//Move a key to the back of the eviction queue
+//move key to the back of the eviction queue
+void* update_keys_fn(void* arg) {
+  char* key = ((key_data_arg_t*)arg)->key;
+  klist_add(&g_keys, key, ((key_data_arg_t*)arg)->obj_size);
+  free(key);
+  return NULL;
+}
+
+//Move a key to the back of the eviction queue (in child thread)
 void touch_key(char* key, size_t obj_size) {
-  klist_add(&g_keys, key, obj_size);
+  //get a copy of key for thread safety stuff
+  key = strdup(key);
+
+  //set up child thread to get input from this connection
+  pthread_t t;
+
+  //set up arg
+  key_data_arg_t* arg = (key_data_arg_t*)malloc(sizeof(key_data_arg_t));
+  if(arg == NULL) {
+    fprintf(stderr, "Failed to allocate memory for key_data_arg\n");
+    exit(EXIT_FAILURE);
+  }
+  arg->key = key;
+  arg->obj_size = obj_size;
+
+  //create thread
+  if(pthread_create(&t, NULL, update_keys_fn, arg)) {
+    perror("Failed to create thread for update_keys_fn\n");
+    exit(EXIT_FAILURE);
+  }
 }

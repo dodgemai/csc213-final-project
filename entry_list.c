@@ -78,6 +78,7 @@ void elist_offer(entry_list_t* elist, char* key, byte_sequence_t* element) {
     }
   }
 }
+
 // Push a unique element onto a elist, overwrite if exists
 void elist_push_unique(entry_list_t* elist, char* key, byte_sequence_t* element) {
   if(elist == NULL) { return; }
@@ -145,17 +146,14 @@ void elist_remove(entry_list_t* elist, char* key) {
 
 // Get a byte_sequence_t from the list, given key
 byte_sequence_t* elist_get(entry_list_t* elist, char* key) {
-  //TODO with expiration junk, maybe bump whatever key is up in the queue
   if(elist == NULL) { return NULL; }
   if(elist_empty(elist)) {
     return NULL;
   }
-
   entry_node_t* cur = elist->first;
 
   //loop through all elements of list
   while(cur != NULL) {
-
     //if we find it, return the corresponding byte sequence
     if(strcmp(cur->key, key) == 0) {
       return cur->data;

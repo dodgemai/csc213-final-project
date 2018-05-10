@@ -4,9 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 /*
- * Doubly linked queue
+ * thread-safe doubly linked queue (thread-safe, but very lazily done)
  */
 
 // This makes the header file work for both C and C++
@@ -26,6 +27,7 @@ extern "C" {
   } key_node_t;
 
   typedef struct key_list {
+    pthread_mutex_t m;
     key_node_t* first;
     key_node_t* last;
     size_t length;

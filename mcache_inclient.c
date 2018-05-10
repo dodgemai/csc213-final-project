@@ -15,6 +15,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #include "server.h"
 #include "mcache.h"
@@ -27,10 +28,44 @@
 hashmap_t g_hmap;
 key_list_t g_keys;
 size_t g_memory_allocated;
+pthread_mutex_t g_m;
 
-//Move a key to the back of the eviction queue
+//for passing key_data to update_keys_fn
+typedef struct key_data_arg {
+  char* key;
+  size_t obj_size;
+} key_data_arg_t;
+
+//move key to the back of the eviction queue
+void* update_keys_fn(void* arg) {
+  char* key = ((key_data_arg_t*)arg)->key;
+  klist_add(&g_keys, key, ((key_data_arg_t*)arg)->obj_size);
+  free(key);
+  return NULL;
+}
+
+//Move a key to the back of the eviction queue (in child thread)
 void touch_key(char* key, size_t obj_size) {
-  klist_add(&g_keys, key, obj_size);
+  //get a copy of key for thread safety stuff
+  key = strdup(key);
+
+  //set up child thread to get input from this connection
+  pthread_t t;
+
+  //set up arg
+  key_data_arg_t* arg = (key_data_arg_t*)malloc(sizeof(key_data_arg_t));
+  if(arg == NULL) {
+    fprintf(stderr, "Failed to allocate memory for key_data_arg\n");
+    exit(EXIT_FAILURE);
+  }
+  arg->key = key;
+  arg->obj_size = obj_size;
+
+  //create thread
+  if(pthread_create(&t, NULL, update_keys_fn, arg)) {
+    perror("Failed to create thread for update_keys_fn\n");
+    exit(EXIT_FAILURE);
+  }
 }
 
 // Initialize the mcache server
@@ -38,6 +73,7 @@ void mcache_init(char* server_address) {
   hashmap_init(&g_hmap); //prep g_hmap
   klist_init(&g_keys);  //prep g_keys
   g_memory_allocated = 0; //init mem_allocated
+  pthread_mutex_init(&g_m, NULL);
 }
 
 // Adds data into the mcache -- if the key already exists, update value
@@ -52,19 +88,24 @@ void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
     //grab the last recently used object
     key_data_t* polled = klist_poll(&g_keys);
 
+    pthread_mutex_lock(&g_m);
     //update memory_allocated
     g_memory_allocated -= polled->data_size;
 
     //remove from hashmap
     hashmap_remove(&g_hmap, polled->key);
+    pthread_mutex_unlock(&g_m);
 
     //free stuff
     free(polled->key);
     free(polled);
   }
 
+
   //update global memory allocation
+  pthread_mutex_lock(&g_m);
   g_memory_allocated += num_bytes;
+  pthread_mutex_unlock(&g_m);
 
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
@@ -102,10 +143,12 @@ void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
     key_data_t* polled = klist_poll(&g_keys);
 
     //update memory_allocated
+    pthread_mutex_lock(&g_m);
     g_memory_allocated -= polled->data_size;
 
     //remove from hashmap
     hashmap_remove(&g_hmap, polled->key);
+    pthread_mutex_unlock(&g_m);
 
     //free stuff
     free(polled->key);
@@ -113,7 +156,9 @@ void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
   }
 
   //update global memory allocation
+  pthread_mutex_lock(&g_m);
   g_memory_allocated += num_bytes;
+  pthread_mutex_unlock(&g_m);
 
   byte_sequence_t* formatted_data = (byte_sequence_t*) malloc(sizeof(byte_sequence_t));
   if(formatted_data == NULL) {
@@ -176,7 +221,9 @@ void mcache_delete(char* key) {
   if(key_data == NULL) { return; }
 
   //update global mem allocated
+  pthread_mutex_lock(&g_m);
   g_memory_allocated -= key_data->data_size;
+  pthread_mutex_unlock(&g_m);
 
   //free necessary key_data stuff
   free(key_data->key);
@@ -190,4 +237,5 @@ void mcache_delete(char* key) {
 void mcache_exit(void) {
   hashmap_destroy(&g_hmap);
   klist_destroy(&g_keys);
+  pthread_mutex_destroy(&g_m);
 }

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-NUM_POINTS=100
+NUM_POINTS=10
 RANGE=10000
 STEP=RANGE/NUM_POINTS
 mkdir -p ./test_data

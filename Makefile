@@ -44,6 +44,8 @@ clean: tidy
 	rm -f server_test
 	rm -rf ./*.dSYM
 	rm -rf ./*.o
+	rm -rf ./*.d
+	
 # Targets to fetch and build external dependencies
 # Get and build libelfin
 $(ROOT)/deps/gtest:

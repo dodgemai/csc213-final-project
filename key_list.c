@@ -24,7 +24,6 @@ void klist_destroy(key_list_t* klist) {
   }
   pthread_mutex_unlock(&klist->m);
   pthread_mutex_destroy(&klist->m);
-  free(klist);
 }
 
 //destroy a key node

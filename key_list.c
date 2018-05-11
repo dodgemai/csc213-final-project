@@ -113,7 +113,7 @@ bool klist_empty(key_list_t* klist) {
     ret = klist->first == NULL;
     pthread_mutex_unlock(&klist->m);
   }
-  return klist->first == NULL;
+  return ret;
 }
 
 //pop the last element off of the klist -- User is responsible for freeing data
@@ -133,6 +133,7 @@ key_data_t* klist_poll(key_list_t* klist) {
     klist->last = NULL;
     klist->first = NULL;
     klist->length--;
+    pthread_mutex_unlock(&klist->m);
     return ret;
   }
 

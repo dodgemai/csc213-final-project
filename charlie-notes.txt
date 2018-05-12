@@ -1,0 +1,12 @@
+to test performance:
+  * fibonacci -- cache intermediate values
+  * if cache miss, then compute some hard value
+  * see what cache-size is necessary to get a network component equal to that of the in-process component
+     * the reason to have a server is so that more memory can be dedicated to the process
+  to improve performance:
+  * in order to improve performance with respect to 'touching/promoting' keys
+    * keep a pointer to the node within the hashmap, and then remove it using the pointer rather than having to iterate through and do it that way -- make it way faster, man!
+    OR 
+    * rather than making threads all of the time, have a thread running constantly that would accept these touch requests
+x * creating threads is expensive -- that's why it's significantly slower, dude
+x * when you make a thread, it doesn't actually switch that thread to a different core for a while, and will need to do 2x the context switches for no reason! This would be bad!

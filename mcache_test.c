@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
       successful_gets++;
     }
   }
-  //printf("Successful gets: %d\n", successful_gets);
+  printf("Successful gets: %d\n", successful_gets);
   assert((successful_gets == MCACHE_MAX_ALLOCATION / 4)
           || successful_gets == num_vals + 1);
 

@@ -134,9 +134,9 @@ void hashmap_put(hashmap_t* map, char* key, byte_sequence_t* value) {
   }
 
   //save current len
+  pthread_mutex_lock(&_bucket->m);
   size_t tmplen = _bucket->elist->length;
 
-  pthread_mutex_lock(&_bucket->m);
   //if bucket already exists, add key-value pair
   elist_push_unique(_bucket->elist, key, value);
   pthread_mutex_unlock(&_bucket->m);
@@ -160,10 +160,10 @@ void hashmap_offer(hashmap_t* map, char* key, byte_sequence_t* value) {
     _bucket = *(map->table + index);
   }
 
-  //store current len
-  size_t tmplen = _bucket->elist->length;
-
   pthread_mutex_lock(&_bucket->m);
+  //store current len
+  size_t tmplen = _bucket->elist->length;  
+
   //if bucket already exists, add key-value pair
   elist_offer(_bucket->elist, key, value);
   pthread_mutex_unlock(&_bucket->m);

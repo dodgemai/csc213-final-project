@@ -122,7 +122,10 @@ key_data_t* klist_poll(key_list_t* klist) {
   if(klist == NULL) { return NULL; }
   pthread_mutex_lock(&klist->m);
   //empty list
-  if(klist->last == NULL) { return NULL; }
+  if(klist->last == NULL) {
+    pthread_mutex_unlock(&klist->m);
+    return NULL;
+  }
 
   key_node_t* new_last = klist->last->prev;
   key_data_t* ret = klist->last->data;

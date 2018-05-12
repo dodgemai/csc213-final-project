@@ -24,11 +24,14 @@
 #include "key_list.h"
 #include "mcache_types.h"
 
+#define IN_CLIENT true
+
 //global values
 hashmap_t g_hmap;
 key_list_t g_keys;
 size_t g_memory_allocated;
 pthread_mutex_t g_m;
+size_t g_cache_misses;
 
 //for passing key_data to update_keys_fn
 typedef struct key_data_arg {
@@ -46,6 +49,8 @@ void* update_keys_fn(void* arg) {
 
 //Move a key to the back of the eviction queue (in child thread)
 void touch_key(char* key, size_t obj_size) {
+  klist_add(&g_keys, key, obj_size);
+  /*
   //get a copy of key for thread safety stuff
   key = strdup(key);
 
@@ -55,17 +60,19 @@ void touch_key(char* key, size_t obj_size) {
   //set up arg
   key_data_arg_t* arg = (key_data_arg_t*)malloc(sizeof(key_data_arg_t));
   if(arg == NULL) {
-    fprintf(stderr, "Failed to allocate memory for key_data_arg\n");
-    exit(EXIT_FAILURE);
-  }
-  arg->key = key;
-  arg->obj_size = obj_size;
+  fprintf(stderr, "Failed to allocate memory for key_data_arg\n");
+  exit(EXIT_FAILURE);
+}
+arg->key = key;
+arg->obj_size = obj_size;
 
-  //create thread
-  if(pthread_create(&t, NULL, update_keys_fn, arg)) {
-    perror("Failed to create thread for update_keys_fn\n");
-    exit(EXIT_FAILURE);
-  }
+//create thread
+if(pthread_create(&t, NULL, update_keys_fn, arg)) {
+perror("Failed to create thread for update_keys_fn\n");
+exit(EXIT_FAILURE);
+}
+pthread_detach(t);
+*/
 }
 
 // Initialize the mcache server
@@ -73,6 +80,7 @@ void mcache_init(char* server_address) {
   hashmap_init(&g_hmap); //prep g_hmap
   klist_init(&g_keys);  //prep g_keys
   g_memory_allocated = 0; //init mem_allocated
+  g_cache_misses = 0;
   pthread_mutex_init(&g_m, NULL);
 }
 
@@ -141,7 +149,7 @@ void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
   while(g_memory_allocated + num_bytes > MCACHE_MAX_ALLOCATION) {
     //grab the last recently used object
     key_data_t* polled = klist_poll(&g_keys);
-
+    if(polled == NULL) { continue; }
     //update memory_allocated
     pthread_mutex_lock(&g_m);
     g_memory_allocated -= polled->data_size;
@@ -188,18 +196,28 @@ void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
 //key is key to value
 //NOTE: returned value must be freed by user
 void* mcache_get(char* key) {
+  printf("Keyset: \n");
+  key_node_t* cur = g_keys.first;
+  for(int i = 0; i < g_keys.length; i++) {
+    printf("key: %d\n", *(int*)cur->data->key);
+    cur = cur->next;
+  }
+
   //get value
   byte_sequence_t* value = hashmap_get(&g_hmap, key);
 
   //cache miss, return NULL
-  if(value == NULL) { return NULL; }
+  if(value == NULL) {
+    g_cache_misses++;
+    return NULL;
+  }
 
   //touch key to denote usage
   touch_key(key, value->length);
 
   //allocate space for ret
   void* ret = malloc(value->length);
-
+  if(ret == NULL) { perror("malloc mcache_get"); exit(EXIT_FAILURE);}
   //fill in ret with appropriate value
   memcpy(ret, value->data, value->length);
 
@@ -232,7 +250,9 @@ void mcache_delete(char* key) {
   //remove key/value from hashmap
   hashmap_remove(&g_hmap, key);
 }
-
+size_t mcache_get_cache_misses() {
+  return g_cache_misses;
+}
 // Cleanup
 void mcache_exit(void) {
   hashmap_destroy(&g_hmap);

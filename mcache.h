@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "entry_list.h"
+#include <stdlib.h>
 
 //NOTE TODO might want to separate byte_sequence_t into a more relevant header file!
 
@@ -24,6 +25,9 @@ byte_sequence_t** mcache_gets(char** keys, size_t num_keys);
 
 // Deletes data stored in the mcache by key
 void mcache_delete(char* key);
+
+//get cache misses
+size_t mcache_get_cache_misses(void);
 
 // Close the mcache server
 void mcache_exit(void);

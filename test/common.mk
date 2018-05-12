@@ -11,8 +11,11 @@ CXXFLAGS ?= -g --std=c++11
 LDFLAGS  += $(addprefix -l,$(LIBS))
 
 # Default source and object files
-SRCS    ?= $(wildcard *.cc) $(wildcard *.cpp) $(wildcard *.c)
+SRCS    ?= mcache_test_parallel.cc mcache_test.c socket_list.c hashmap.c entry_list.c mcache.c
 OBJS    ?= $(addprefix obj/,$(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SRCS)))))
+
+obj/mcache_test_parallel.cc: mcache_test_parallel.cc server.h socket_list.c socket_list.h hashmap.h hashmap.c entry_list.c entry_list.h mcache_types.h mcache.h mcache.c
+	
 
 # Targets to build recirsively into $(DIRS)
 RECURSIVE_TARGETS  ?= all clean test

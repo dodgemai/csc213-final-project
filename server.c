@@ -18,10 +18,7 @@
 #include "server.h"
 #include "mcache_types.h"
 
-#define _DEBUG true
-/* NOTE: maybe don't actually need g_child_socks -- we will see.
-* we can keep for now, but I really don't foresee a need for it to exist
-*/
+#define _DEBUG false
 
 /**
 * Thread function to read input from child thread
@@ -345,6 +342,12 @@ void parse_add(char* args, int socket) {
   read(socket, &data_length, 2);
   data_length = ntohs(data_length);
 
+  //check to see if key is already stored, and if so, touch key and exit
+  if(hashmap_contains_key(&g_hmap, key)) {
+    touch_key(key, data_length);
+    return;
+  }
+
   //allocate and fill data
   void* data = malloc(data_length);
   if(data == NULL) {
@@ -419,7 +422,7 @@ void parse_get(char* args, int socket) {
     printf("Keyset: \n");
     key_node_t* cur = g_keys.first;
     for(int i = 0; i < g_keys.length; i++) {
-      printf("key: %d\n", *(int*)cur->data->key);
+      printf("key: %d, size: %lu\n", *(int*)cur->data->key, cur->data->data_size);
       cur = cur->next;
     }
   }

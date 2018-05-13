@@ -7,38 +7,43 @@
 
 //update key with new n value -- note: key should already be null terminated
 void update_key(int n, char* key) {
+  sprintf(key, "%d", n);
+  /*this whole key thing doesn't work if n is a power of two, so, if it's
+   * a power of two then just make the key something larger, that's not
+   * a power of two
+   * this will break if you try to make it break, but just don't do that, this
+   * is a short testing thing only!
+   */
+   /*
+  if(n && !(n & (n - 1))) {
+    n *= 47621;
+  }
   memcpy(key, &n, sizeof(n));
+  */
 }
 
-unsigned long long fibonacci(int n) {
-  //key is basically just gonna be the bytes of int and a null terminator
-  char* key1 = malloc(sizeof(int) + 1);
-  char* key2 = malloc(sizeof(int) + 1);
-  char* key3 = malloc(sizeof(int) + 1);
-  key1[sizeof(int)] = '\0';
-  key2[sizeof(int)] = '\0';
-  key3[sizeof(int)] = '\0';
+size_t fibonacci(int n) {
+  char key1[25];
+  char key2[25];
+  char key3[25];
 
   //check to see if n value has already been cached...
   update_key(n, key1);
-  unsigned long long* v = mcache_get(key1);
+  size_t* v = mcache_get(key1);
 
   //if cached, free val and return it
   if(v != NULL) {
-    unsigned long long tmp = *v;
+    size_t tmp = *v;
     free(v);
-    free(key1);
-    free(key2);
-    free(key3);
     return tmp;
   }
 
   int f0 = 0, f1 = 1;
   update_key(f0, key2);
-  mcache_add(key2, &(unsigned long long) { 0 }, sizeof(unsigned long long));
+  mcache_add(key2, &(size_t) { 0 }, sizeof(size_t));
 
   update_key(f1, key3);
-  mcache_add(key3, &(unsigned long long) { 1 }, sizeof(unsigned long long));
+  mcache_add(key3, &(size_t) { 1 }, sizeof(size_t));
 
   for(int i = 2; i <= n; i++) {
     //update keys
@@ -47,8 +52,8 @@ unsigned long long fibonacci(int n) {
     update_key(i - 2, key3);
 
     //get some space for these values
-    unsigned long long* v1 = malloc(sizeof(unsigned long long));
-    unsigned long long* v2 = malloc(sizeof(unsigned long long));
+    size_t* v1 = malloc(sizeof(size_t));
+    size_t* v2 = malloc(sizeof(size_t));
     void* tmp1 = v1;
     void* tmp2 = v2;
 
@@ -67,16 +72,13 @@ unsigned long long fibonacci(int n) {
     }
 
     //store tmp values
-    unsigned long long final = *v1 + *v2;
+    size_t final = *v1 + *v2;
 
     //update cache to have new value
     mcache_add(key1, &final, sizeof(final));
 
     //just return if final
     if(i == n) {
-      free(key1);
-      free(key2);
-      free(key3);
       return final;
     }
   }
@@ -85,7 +87,7 @@ unsigned long long fibonacci(int n) {
   return 1234567;
 }
 
-unsigned long long fibonacci2(int n) {
+size_t fibonacci2(int n) {
   if(n == 0 || n == 1) {
     return n;
   } else {
@@ -100,11 +102,13 @@ int main(int argc, char** argv) {
   }
   int n = atoi(argv[1]);
   if(n <= 0) { return 2; }
+  fibonacci2(n);
+  return 0;
 
   mcache_init("localhost");
 
   printf("Computing the %dth number in the fibonacci sequence...\n", n);
-  printf("The %dth number is: %llu\n", n, fibonacci(n));
+  printf("The %dth number is: %zu\n", n, fibonacci(n));
   printf("Cache misses: %zu\n", mcache_get_cache_misses());
   /*
   printf("Now, not using mcache...\n");

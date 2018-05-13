@@ -5,6 +5,16 @@
 #include <assert.h>
 #include <unistd.h>
 
+#define FIB_DELAY 25
+
+size_t fibonacci_bad(int n) {
+  if(n == 0 || n == 1) {
+    return n;
+  } else {
+    return fibonacci_bad(n - 1) + fibonacci_bad(n - 2);
+  }
+}
+
 int main(int argc, char** argv) {
   if(argc != 2) {
     fprintf(stderr, "usage: %s <num-to-test>\n", argv[0]);
@@ -15,7 +25,7 @@ int main(int argc, char** argv) {
 
   mcache_init("localhost");
 
-  printf("Testing with int values...\n");
+  //printf("Testing with int values...\n");
   for(int i = 0; i <= num_vals; i++) {
     char key[25];
     sprintf(key, "key%d", i);
@@ -25,7 +35,7 @@ int main(int argc, char** argv) {
     assert(*((int*)mcache_get(key)) == i);
   }
 
-  printf("Testing for proper eviction...\n");
+  //printf("Testing for proper eviction...\n");
   int successful_gets = 0;
   for(int i = 0; i <= num_vals; i++) {
     char key[25];
@@ -35,13 +45,16 @@ int main(int argc, char** argv) {
       assert(*val == i);
       //printf("Successfully got %d\n", i);
       successful_gets++;
+    } else {
+      /* cache miss!!! artificial delay */
+      fibonacci_bad(FIB_DELAY);
     }
   }
-  printf("Successful gets: %d\n", successful_gets);
+  //printf("Successful gets: %d\n", successful_gets);
   assert((successful_gets == MCACHE_MAX_ALLOCATION / 4)
           || successful_gets == num_vals + 1);
 
-  printf("All tests successful.\n");
+  //printf("All tests successful.\n");
 
   mcache_exit();
 }

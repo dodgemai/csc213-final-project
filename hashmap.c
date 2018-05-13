@@ -78,7 +78,9 @@ bool hashmap_contains_key(hashmap_t* map, char* key) {
   if(map == NULL) { return false; }
 
   unsigned int index = hash(key) % map->capacity;
-  return *(map->table + index) == NULL;
+  bucket_t* bucket = *(map->table + index);
+  if(bucket == NULL) { return false; }
+  return elist_get(bucket->elist, key) != NULL;
 }
 
 // Get a value by key
@@ -162,7 +164,7 @@ void hashmap_offer(hashmap_t* map, char* key, byte_sequence_t* value) {
 
   pthread_mutex_lock(&_bucket->m);
   //store current len
-  size_t tmplen = _bucket->elist->length;  
+  size_t tmplen = _bucket->elist->length;
 
   //if bucket already exists, add key-value pair
   elist_offer(_bucket->elist, key, value);

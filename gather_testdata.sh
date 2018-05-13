@@ -1,6 +1,6 @@
 #! /bin/bash
 
-NUM_POINTS=10
+NUM_POINTS=100
 RANGE=10000
 STEP=RANGE/NUM_POINTS
 mkdir -p ./test_data
@@ -9,10 +9,12 @@ OUTPUT_FILE=lots-of-data
 
 rm ./test_data/$OUTPUT_FILE.data
 rm ./test_data/$OUTPUT_FILE.labels
+rm ./test_data/$OUTPUT_FILE.ipdadata
+rm ./test_data/$OUTPUT_FILE.iplabels
 
 ./server &
 
-for ((i=0; i<RANGE; i+=STEP)); do
+for ((i=STEP; i<RANGE; i+=STEP)); do
     echo Collecting data for $i:
     echo ip $i >> ./test_data/$OUTPUT_FILE.iplabels
     echo net $i >> ./test_data/$OUTPUT_FILE.labels

@@ -24,7 +24,12 @@
 #include "key_list.h"
 #include "mcache_types.h"
 
-#define IN_CLIENT true
+/* artificially make the in-memory cache within process smaller
+ * for the purposes of testing 'realistic' performance
+ * because the within-client implementation would necessarily have less space
+ * available
+ */
+#define SMALL_FACTOR 3
 
 //global values
 hashmap_t g_hmap;
@@ -87,12 +92,12 @@ void mcache_init(char* server_address) {
 // Adds data into the mcache -- if the key already exists, update value
 void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
   //if object size is greater than storage space, don't store it
-  if(num_bytes > MCACHE_MAX_ALLOCATION) {
+  if(num_bytes > MCACHE_MAX_ALLOCATION / SMALL_FACTOR) {
     return;
   }
 
   //evict until there's enough space for new object
-  while(g_memory_allocated + num_bytes > MCACHE_MAX_ALLOCATION) {
+  while(g_memory_allocated + num_bytes > MCACHE_MAX_ALLOCATION / SMALL_FACTOR) {
     //grab the last recently used object
     key_data_t* polled = klist_poll(&g_keys);
 
@@ -142,6 +147,12 @@ void mcache_set(char* key, void* data_ptr, size_t num_bytes) {
 void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
   //if object size is greater than storage space, don't store it
   if(num_bytes > MCACHE_MAX_ALLOCATION) {
+    return;
+  }
+
+  //check to see if key is already stored, and if so, touch key and exit
+  if(hashmap_contains_key(&g_hmap, key)) {
+    touch_key(key, num_bytes);
     return;
   }
 
@@ -196,12 +207,14 @@ void mcache_add(char* key, void* data_ptr, size_t num_bytes) {
 //key is key to value
 //NOTE: returned value must be freed by user
 void* mcache_get(char* key) {
+  /*
   printf("Keyset: \n");
   key_node_t* cur = g_keys.first;
   for(int i = 0; i < g_keys.length; i++) {
     printf("key: %d\n", *(int*)cur->data->key);
     cur = cur->next;
   }
+  */
 
   //get value
   byte_sequence_t* value = hashmap_get(&g_hmap, key);

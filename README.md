@@ -50,12 +50,14 @@ Note: executables with "ip" in the name are "in-process" executables, and can ru
   * mcache.c is the implementation to talk to the server
   * mcache_inclient.c is the implementation to work within the client process
     * this essentially contains much of the same code as from server.c, as in this case the client is acting as it's own caching mechanism, so everything is internal
+* mcache_types.h
+  * contains useful macros to change things like cache_size, and has other things that are necessary for mcache implementation
 * mcache_test_parallel.c 
   * more robust testing suite for mcache -- attempt was made at testing parallelism but this did not work as we would have hoped, due to the nature of the server. See comments within file for more details. 
 * mcache_test_parallel.cc 
   * for future google-test suite usage (currently partially unfinished)
 * server.c 
-  * mcache server
+  * mcache server, does what you would want it to do
 * server.h 
   * just contains macro for the port that the server will listen on
 * server_test.c 
@@ -67,3 +69,4 @@ Note: executables with "ip" in the name are "in-process" executables, and can ru
 * currently upper limit on object size of 2^15 -- this should be fine, but can also be changed pretty easily if necessary
 * cache size can be changed using macro in mcache_types.h (currently 300 bytes)
 * eviction done passively with LRU -- when trying to place an item that would overfill cache, items are pushed out unitl there is enough space. In the case that the object is greater than the cache size, the object is simply not stored, and no items are evicted. 
+* currently server-implementation runs *very* slowly on mathlan machines. Not sure why, it didn't before, and it runs perfectly fine on macbook pro using macOS Sierra 10.12.6 w/ 2.7 GHz Intel Core i5 and 8 GB RAM

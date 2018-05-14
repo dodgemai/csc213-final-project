@@ -1,36 +1,45 @@
+./gather_testdata.sh: line 23:  4449 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	0m6.802s
-user	0m6.759s
-sys	0m0.019s
+real	0m0.119s
+user	0m0.107s
+sys	0m0.004s
+./gather_testdata.sh: line 23:  4451 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	0m13.874s
-user	0m13.805s
-sys	0m0.024s
+real	0m0.252s
+user	0m0.242s
+sys	0m0.003s
+./gather_testdata.sh: line 23:  4452 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	0m26.011s
-user	0m25.602s
-sys	0m0.045s
+real	0m0.383s
+user	0m0.375s
+sys	0m0.003s
+./gather_testdata.sh: line 23:  4453 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	0m44.430s
-user	0m38.502s
-sys	0m0.194s
+real	0m0.523s
+user	0m0.514s
+sys	0m0.004s
+./gather_testdata.sh: line 23:  4454 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	1m7.357s
-user	0m48.367s
-sys	0m0.188s
+real	0m0.668s
+user	0m0.658s
+sys	0m0.004s
+./gather_testdata.sh: line 23:  4455 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	1m30.810s
-user	0m58.055s
-sys	0m0.123s
+real	0m0.785s
+user	0m0.774s
+sys	0m0.004s
+./gather_testdata.sh: line 23:  4456 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	2m0.891s
-user	1m7.864s
-sys	0m0.149s
+real	0m0.906s
+user	0m0.895s
+sys	0m0.005s
+./gather_testdata.sh: line 23:  4457 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	2m33.228s
-user	1m17.713s
-sys	0m0.183s
+real	0m1.044s
+user	0m1.030s
+sys	0m0.005s
+./gather_testdata.sh: line 23:  4459 Abort trap: 6           ./mcache_iptest $i 2> /dev/null
 
-real	3m25.170s
-user	1m27.533s
-sys	0m0.209s
+real	0m1.165s
+user	0m1.153s
+sys	0m0.005s

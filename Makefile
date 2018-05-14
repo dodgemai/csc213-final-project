@@ -1,4 +1,4 @@
-CFLAGS=-Wall -std=gnu99  -g  # -fsanitize=address # -gp
+CFLAGS=-Wall -std=gnu99  # -g  # -fsanitize=address # -gp
 CXXFLAGS=-Wall -g -fsanitize=address -isystem $(ROOT)/deps/gtest/include/
 CC=gcc
 CXX=clang++

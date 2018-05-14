@@ -10,11 +10,11 @@
 extern "C" {
 #endif
 
-  //special byte to specify end of message
+  //special byte to specify end of message -- Note: deprecated
   #define MCACHE_END_BUFF 0x0c001be9
 
   //max number of bytes held by this cache
-  #define MCACHE_MAX_ALLOCATION 100
+  #define MCACHE_MAX_ALLOCATION 300
 
   typedef struct byte_sequence {
     void* data; /* points to the actual byte sequence */

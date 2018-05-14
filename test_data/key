@@ -1,0 +1,4 @@
+d1: ignore
+d2: small_factor = 3
+d3: small_factor = 4
+d4: small_factor = 2

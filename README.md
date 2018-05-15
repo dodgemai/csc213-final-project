@@ -39,6 +39,7 @@ Note: executables with "ip" in the name are "in-process" executables, and can ru
 * gather_testdata.sh
   * script to gather data -- data is put into test_data folder
     * .ip* is for in-process implementation data, and non-ip are for server implementation
+  * can comment / uncomment lines as necessary depending on the data you are trying to collect
 * hashmap.c, hashmap.h
   * your basic hashmap -- fixed-size, thread-safe, chaining. For use with efficiently storing/retrieving data from cache.
 * hashmap_test.c 
@@ -50,6 +51,7 @@ Note: executables with "ip" in the name are "in-process" executables, and can ru
   * mcache.c is the implementation to talk to the server
   * mcache_inclient.c is the implementation to work within the client process
     * this essentially contains much of the same code as from server.c, as in this case the client is acting as it's own caching mechanism, so everything is internal
+    * SMALL_FACTOR macro at the start determines the factor that this cache will be smaller than the network cache
 * mcache_types.h
   * contains useful macros to change things like cache_size, and has other things that are necessary for mcache implementation
 * mcache_test_parallel.c 
